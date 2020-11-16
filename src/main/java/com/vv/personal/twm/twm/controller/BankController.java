@@ -7,6 +7,7 @@ import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,10 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Vivek
  * @since 16/11/20
  */
-@RestController("CentralController")
-@RequestMapping("/central")
-public class CentralController {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CentralController.class);
+@RestController("BankController")
+@RequestMapping("/central/bank")
+public class BankController {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BankController.class);
 
     @Autowired
     private MongoServiceFeign mongoServiceFeign;
@@ -44,5 +45,32 @@ public class CentralController {
     @ApiOperation(value = "add dummy new bank entry")
     public String dummyTester() {
         return addBank("JPY", "JPY020323", 123345676L, BankType.PRIVATE);
+    }
+
+    @PostMapping("/deleteBank")
+    @ApiOperation(value = "delete bank on IFSC code")
+    public String deleteBank(String ifscToDelete) {
+        try {
+            return mongoServiceFeign.deleteBank(ifscToDelete);
+        } catch (Exception e) {
+            LOGGER.error("Failed to call mongo service's deleteBank end-point. ", e);
+        }
+        return "FAILED!!";
+    }
+
+    @GetMapping("/getBanks")
+    @ApiOperation(value = "get bank(s) on fields")
+    public String getBanks(BankFields bankField,
+                           String searchValue) {
+        try {
+            return mongoServiceFeign.getBanks(bankField.name(), searchValue);
+        } catch (Exception e) {
+            LOGGER.error("Failed to call mongo service's deleteBank end-point. ", e);
+        }
+        return "FAILED!!";
+    }
+
+    private enum BankFields {
+        ALL, NAME, TYPE, IFSC
     }
 }
