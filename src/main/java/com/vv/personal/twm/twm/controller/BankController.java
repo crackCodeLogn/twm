@@ -2,7 +2,8 @@ package com.vv.personal.twm.twm.controller;
 
 import com.vv.personal.twm.artifactory.bank.Bank;
 import com.vv.personal.twm.artifactory.bank.BankType;
-import com.vv.personal.twm.twm.feign.MongoServiceFeign;
+import com.vv.personal.twm.twm.feign.BankServiceFeign;
+import com.vv.personal.twm.twm.feign.RenderServiceFeign;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,11 +23,14 @@ public class BankController {
     private static final Logger LOGGER = LoggerFactory.getLogger(BankController.class);
 
     @Autowired
-    private MongoServiceFeign mongoServiceFeign;
+    private BankServiceFeign bankServiceFeign;
+
+    @Autowired
+    private RenderServiceFeign renderServiceFeign;
 
     @PostMapping("/addBank")
     @ApiOperation(value = "add new bank entry")
-    private String addBank(String bank, String bankIfsc, Long contactNumber, BankType bankType) {
+    private String addBank(String bank, String bankIfsc, String contactNumber, BankType bankType) {
         Bank newBank = new Bank()
                 .setName(bank)
                 .setIFSC(bankIfsc)
@@ -34,7 +38,7 @@ public class BankController {
                 .setType(bankType);
         LOGGER.info("Took input a new bank => '{}'", newBank);
         try {
-            return mongoServiceFeign.addBank(newBank);
+            return bankServiceFeign.addBank(newBank);
         } catch (Exception e) {
             LOGGER.error("Failed to call mongo service's addBank end-point. ", e);
         }
@@ -44,14 +48,14 @@ public class BankController {
     @PostMapping("/dummyAddBank")
     @ApiOperation(value = "add dummy new bank entry")
     public String dummyTester() {
-        return addBank("JPY", "JPY020323", 123345676L, BankType.PRIVATE);
+        return addBank("JPY", "JPY020323", "123345676", BankType.PRIVATE);
     }
 
     @PostMapping("/deleteBank")
     @ApiOperation(value = "delete bank on IFSC code")
     public String deleteBank(String ifscToDelete) {
         try {
-            return mongoServiceFeign.deleteBank(ifscToDelete);
+            return bankServiceFeign.deleteBank(ifscToDelete);
         } catch (Exception e) {
             LOGGER.error("Failed to call mongo service's deleteBank end-point. ", e);
         }
@@ -63,7 +67,11 @@ public class BankController {
     public String getBanks(BankFields bankField,
                            String searchValue) {
         try {
-            return mongoServiceFeign.getBanks(bankField.name(), searchValue);
+            String banksQueryResponse = bankServiceFeign.getBanks(bankField.name(), searchValue);
+            LOGGER.info("Banks query resp: {}", banksQueryResponse);
+            String rendOutput = renderServiceFeign.rendBanks(banksQueryResponse);
+            LOGGER.info("HTML table output:-\n{}", rendOutput);
+            return rendOutput;
         } catch (Exception e) {
             LOGGER.error("Failed to call mongo service's deleteBank end-point. ", e);
         }
