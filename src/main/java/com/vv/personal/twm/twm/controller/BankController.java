@@ -98,7 +98,7 @@ public class BankController {
         }
 
         try {
-            String rendOutput = renderServiceFeign.rendBanks(banksQueryResponse.toString()); //modify render svc
+            String rendOutput = renderServiceFeign.rendBanks(banksQueryResponse);
             LOGGER.info("HTML table output:-\n{}", rendOutput);
             return rendOutput;
         } catch (Exception e) {
@@ -166,16 +166,25 @@ public class BankController {
     @ApiOperation(value = "get FD(s) on fields")
     public String getFixedDeposits(FdFields fdFields,
                                    String searchValue) {
+        FixedDepositProto.FixedDepositList fdQueryResponse;
         try {
-            FixedDepositProto.FixedDepositList fdQueryResponse = fdFields != FdFields.ALL
+            fdQueryResponse = fdFields != FdFields.ALL
                     ? bankServiceFeign.getFds(fdFields.name(), searchValue)
                     : getAllFixedDeposits();
             LOGGER.info("FD query resp: {}", fdQueryResponse);
-            return fdQueryResponse.toString(); //TOOO -- render this
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's getFds end-point. ", e);
+            return FAILED;
         }
-        return "FAILED!!";
+
+        try {
+            String rendOutput = renderServiceFeign.rendFds(fdQueryResponse);
+            LOGGER.info("HTML table output:-\n{}", rendOutput);
+            return rendOutput;
+        } catch (Exception e) {
+            LOGGER.error("Failed to call / process rendering service's rendBanks end-point. ", e);
+        }
+        return FAILED;
     }
 
     public BankProto.BankList getAllBanks() {
