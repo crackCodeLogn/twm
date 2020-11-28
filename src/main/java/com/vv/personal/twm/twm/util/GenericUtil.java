@@ -31,6 +31,8 @@ public class GenericUtil {
         calendar.set(Calendar.YEAR, date.getYear());
         calendar.set(Calendar.HOUR_OF_DAY, time.getHour());
         calendar.set(Calendar.MINUTE, time.getMinute());
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
         return calendar.getTimeInMillis();
     }
 }
