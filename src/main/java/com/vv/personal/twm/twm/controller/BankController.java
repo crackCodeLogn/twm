@@ -86,9 +86,11 @@ public class BankController {
     @ApiOperation(value = "get bank(s) on fields")
     public String getBanks(BankFields bankField,
                            String searchValue) {
-        String banksQueryResponse;
+        BankProto.BankList banksQueryResponse;
         try {
-            banksQueryResponse = bankField != BankFields.ALL ? bankServiceFeign.getBanks(bankField.name(), searchValue) : getAllBanks();
+            banksQueryResponse = bankField != BankFields.ALL
+                    ? bankServiceFeign.getBanks(bankField.name(), searchValue)
+                    : getAllBanks();
             LOGGER.info("Banks query resp: {}", banksQueryResponse);
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's getBanks end-point. ", e);
@@ -96,7 +98,7 @@ public class BankController {
         }
 
         try {
-            String rendOutput = renderServiceFeign.rendBanks(banksQueryResponse);
+            String rendOutput = renderServiceFeign.rendBanks(banksQueryResponse.toString()); //modify render svc
             LOGGER.info("HTML table output:-\n{}", rendOutput);
             return rendOutput;
         } catch (Exception e) {
@@ -149,12 +151,6 @@ public class BankController {
         return FAILED;
     }
 
-    /*@PostMapping("/fd/dummyAddFd")
-    @ApiOperation(value = "add dummy new FD entry")
-    public String dummyFdTester() {
-        return addFixedDeposit("JPY", "JPY020323", "123345676", BankProto.BankType.PRIVATE);
-    }
-*/
     @PostMapping("/fd/deleteFixedDeposit")
     @ApiOperation(value = "delete FD on supplied key")
     public String deleteFixedDeposit(String fdKey) {
@@ -171,21 +167,23 @@ public class BankController {
     public String getFixedDeposits(FdFields fdFields,
                                    String searchValue) {
         try {
-            String fdQueryResponse = bankServiceFeign.getFds(fdFields.name(), searchValue);
+            FixedDepositProto.FixedDepositList fdQueryResponse = fdFields != FdFields.ALL
+                    ? bankServiceFeign.getFds(fdFields.name(), searchValue)
+                    : getAllFixedDeposits();
             LOGGER.info("FD query resp: {}", fdQueryResponse);
-            /*String rendOutput = renderServiceFeign.rendBanks(fdQueryResponse);
-            LOGGER.info("HTML table output:-\n{}", rendOutput);
-            return rendOutput;*/
-            return fdQueryResponse;
+            return fdQueryResponse.toString(); //TOOO -- render this
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's getFds end-point. ", e);
         }
         return "FAILED!!";
     }
 
-
-    public String getAllBanks() {
+    public BankProto.BankList getAllBanks() {
         return bankServiceFeign.getBanks(BankFields.ALL.name(), EMPTY_STR);
+    }
+
+    public FixedDepositProto.FixedDepositList getAllFixedDeposits() {
+        return bankServiceFeign.getFds(FdFields.ALL.name(), EMPTY_STR);
     }
 
     public InspectResult inspectInput(String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days, String insertionTime) {

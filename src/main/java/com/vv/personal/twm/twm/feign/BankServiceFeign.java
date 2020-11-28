@@ -22,8 +22,8 @@ public interface BankServiceFeign {
     String deleteBank(@RequestBody String ifscToDelete);
 
     @GetMapping("/banking/banks/getBanks?field={field}&value={value}")
-    String getBanks(@PathVariable("field") String field,
-                    @PathVariable("value") String value);
+    BankProto.BankList getBanks(@PathVariable("field") String field,
+                                @PathVariable("value") String value);
 
     @PostMapping("/banking/fd/addFd")
     String addFd(@RequestBody FixedDepositProto.FixedDeposit newFixedDeposit);
@@ -32,6 +32,6 @@ public interface BankServiceFeign {
     String deleteFd(@RequestBody String fdKey);
 
     @GetMapping("/banking/fd/getFds?field={field}&value={value}")
-    String getFds(@PathVariable("field") String field,
-                  @PathVariable("value") String value);
+    FixedDepositProto.FixedDepositList getFds(@PathVariable("field") String field,
+                                              @PathVariable("value") String value);
 }
