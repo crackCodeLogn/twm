@@ -1,6 +1,5 @@
 package com.vv.personal.twm.twm.controller;
 
-import com.vv.personal.twm.artifactory.FixedDepositKeyUtil;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.twm.constants.BankFields;
@@ -8,7 +7,6 @@ import com.vv.personal.twm.twm.constants.FdFields;
 import com.vv.personal.twm.twm.feign.BankServiceFeign;
 import com.vv.personal.twm.twm.feign.RenderServiceFeign;
 import com.vv.personal.twm.twm.util.DateUtil;
-import com.vv.personal.twm.twm.util.TimeUtil;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +18,6 @@ import java.util.LinkedList;
 
 import static com.vv.personal.twm.twm.constants.Constants.EMPTY_STR;
 import static com.vv.personal.twm.twm.constants.Constants.FAILED;
-import static com.vv.personal.twm.twm.util.GenericUtil.generateInsertionTime;
 
 /**
  * @author Vivek
@@ -104,37 +101,42 @@ public class BankController {
     @GetMapping("/fd/addFd")
     @ApiOperation(value = "add new FD entry")
     private String addFixedDeposit(@RequestParam(defaultValue = "V2") String user,
+                                   @RequestParam(defaultValue = "12345678901") String fdNumber, //the Key/FD
+                                   @RequestParam(defaultValue = "12345678901") String customerId,
                                    @RequestParam(defaultValue = "ABCD0123456") String bankIfsc,
                                    @RequestParam(defaultValue = "0.0") double depositAmount,
                                    @RequestParam(defaultValue = "0.0") double rateOfInterest,
                                    @RequestParam(defaultValue = "20201128") String startDate,
+                                   @RequestParam(defaultValue = "20201128") String endDate,
                                    @RequestParam(defaultValue = "25") int months,
                                    @RequestParam(required = false, defaultValue = "1") int days,
                                    FixedDepositProto.InterestType interestType,
-                                   @RequestParam String nominee,
-                                   @RequestParam(defaultValue = "20201128-17:22") String insertionTime) {
-        final InspectResult inputVerificationResult = inspectInput(bankIfsc, depositAmount, rateOfInterest, startDate, months, days, insertionTime);
+                                   @RequestParam String nominee) {
+        final InspectResult inputVerificationResult = inspectInput(fdNumber, customerId, bankIfsc, depositAmount, rateOfInterest, startDate, endDate, months, days);
         if (!inputVerificationResult.isPass()) {
             LOGGER.warn("New FD input failed due to incorrect entries => {}. Retry with correct details", inputVerificationResult.getPassResult());
             return inputVerificationResult.getPassResult();
         }
 
-        long insertionTimeMillis = generateInsertionTime(insertionTime);
         FixedDepositProto.FixedDeposit.Builder fixedDepositBuilder = FixedDepositProto.FixedDeposit.newBuilder()
                 .setUser(user)
+                .setFdNumber(fdNumber)
+                .setCustomerId(customerId)
                 .setBankIFSC(bankIfsc)
                 .setDepositAmount(depositAmount)
                 .setRateOfInterest(rateOfInterest)
                 .setStartDate(startDate)
+                .setEndDate(endDate)
                 .setMonths(months)
                 .setDays(days)
                 .setInterestType(interestType)
-                .setNominee(nominee)
-                .setInsertionTime(insertionTimeMillis);
-        String fdKey = FixedDepositKeyUtil.generateFdKey(fixedDepositBuilder);
-        FixedDepositProto.FixedDeposit fixedDeposit = fixedDepositBuilder.setKey(fdKey).build();
+                .setNominee(nominee);
+        //String fdKey = FixedDepositKeyUtil.generateFdKey(fixedDepositBuilder);
+        FixedDepositProto.FixedDeposit fixedDeposit = fixedDepositBuilder
+                //.setKey(fdKey)
+                .build();
 
-        LOGGER.info("Took input a new FD => '{}'", fdKey);
+        LOGGER.info("Took input a new FD => '{}'", fixedDeposit.getFdNumber());
         try {
             String bankCallResult = bankServiceFeign.addFd(fixedDeposit);
             LOGGER.info("Result from bank service call => {}", bankCallResult);
@@ -189,17 +191,20 @@ public class BankController {
         return bankServiceFeign.getFds(FdFields.ALL.name(), EMPTY_STR);
     }
 
-    public InspectResult inspectInput(String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days, String insertionTime) {
+    public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, String endDate, int months, int days) {
         final InspectResult result = new InspectResult().setPass(false);
+        if (!fdNumber.matches("[0-9]+")) return result.setPassResult("FD-number in incorrect format. Correct => [0-9]+");
+        if (!customerId.matches("[0-9]+")) return result.setPassResult("CustomerId in incorrect format. Correct => [0-9]+");
         if (!bankIfsc.matches("[A-Z]{4}[0-9]{7}")) return result.setPassResult("IFSC in incorrect format. Correct => [A-Z]{4}[0-9]{7}");
         if (depositAmount <= 0.0) return result.setPassResult("Deposit amt has to be positive");
         if (rateOfInterest <= 0.0) return result.setPassResult("Rate of interest has to be positive");
         if (DateUtil.transmuteToLocalDate(startDate) == null) return result.setPassResult("Start date in incorrect format. Correct => YYYYMMDD");
+        if (DateUtil.transmuteToLocalDate(endDate) == null) return result.setPassResult("End date in incorrect format. Correct => YYYYMMDD");
         if (months <= 0) return result.setPassResult("Deposit months has to be positive");
-        if (days <= 0) return result.setPassResult("Deposit days has to be positive");
-        String[] insertionTimeSplit = insertionTime.split("-");
+        if (days < 0) return result.setPassResult("Deposit days has to be positive");
+        /*String[] insertionTimeSplit = insertionTime.split("-");
         if (DateUtil.transmuteToLocalDate(insertionTimeSplit[0]) == null || TimeUtil.transmuteToLocalTime(insertionTimeSplit[1]) == null)
-            return result.setPassResult("Insertion time in incorrect format. Correct => YYYYMMDD-HH:mm");
+            return result.setPassResult("Insertion time in incorrect format. Correct => YYYYMMDD-HH:mm");*/
         return result.setPass(true);
     }
 
