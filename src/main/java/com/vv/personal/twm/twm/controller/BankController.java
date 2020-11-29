@@ -65,12 +65,6 @@ public class BankController {
         return "FAILED!!";
     }
 
-    @PostMapping("/banks/dummyAddBank")
-    @ApiOperation(value = "add dummy new bank entry")
-    public String dummyTester() {
-        return addBank("JPY", "JPY020323", "123345676", BankProto.BankType.PRIVATE);
-    }
-
     @PostMapping("/banks/deleteBank")
     @ApiOperation(value = "delete bank on IFSC code")
     public String deleteBank(String ifscToDelete) {
