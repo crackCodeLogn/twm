@@ -107,12 +107,11 @@ public class BankController {
                                    @RequestParam(defaultValue = "0.0") double depositAmount,
                                    @RequestParam(defaultValue = "0.0") double rateOfInterest,
                                    @RequestParam(defaultValue = "20201128") String startDate,
-                                   @RequestParam(defaultValue = "20201128") String endDate,
                                    @RequestParam(defaultValue = "25") int months,
-                                   @RequestParam(required = false, defaultValue = "1") int days,
+                                   @RequestParam(required = false, defaultValue = "0") int days,
                                    FixedDepositProto.InterestType interestType,
                                    @RequestParam String nominee) {
-        final InspectResult inputVerificationResult = inspectInput(fdNumber, customerId, bankIfsc, depositAmount, rateOfInterest, startDate, endDate, months, days);
+        final InspectResult inputVerificationResult = inspectInput(fdNumber, customerId, bankIfsc, depositAmount, rateOfInterest, startDate, months, days);
         if (!inputVerificationResult.isPass()) {
             LOGGER.warn("New FD input failed due to incorrect entries => {}. Retry with correct details", inputVerificationResult.getPassResult());
             return inputVerificationResult.getPassResult();
@@ -126,7 +125,6 @@ public class BankController {
                 .setDepositAmount(depositAmount)
                 .setRateOfInterest(rateOfInterest)
                 .setStartDate(startDate)
-                .setEndDate(endDate)
                 .setMonths(months)
                 .setDays(days)
                 .setInterestType(interestType)
@@ -191,7 +189,7 @@ public class BankController {
         return bankServiceFeign.getFds(FdFields.ALL.name(), EMPTY_STR);
     }
 
-    public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, String endDate, int months, int days) {
+    public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days) {
         final InspectResult result = new InspectResult().setPass(false);
         if (!fdNumber.matches("[0-9]+")) return result.setPassResult("FD-number in incorrect format. Correct => [0-9]+");
         if (!customerId.matches("[0-9]+")) return result.setPassResult("CustomerId in incorrect format. Correct => [0-9]+");
@@ -199,7 +197,7 @@ public class BankController {
         if (depositAmount <= 0.0) return result.setPassResult("Deposit amt has to be positive");
         if (rateOfInterest <= 0.0) return result.setPassResult("Rate of interest has to be positive");
         if (DateUtil.transmuteToLocalDate(startDate) == null) return result.setPassResult("Start date in incorrect format. Correct => YYYYMMDD");
-        if (DateUtil.transmuteToLocalDate(endDate) == null) return result.setPassResult("End date in incorrect format. Correct => YYYYMMDD");
+        //if (DateUtil.transmuteToLocalDate(endDate) == null) return result.setPassResult("End date in incorrect format. Correct => YYYYMMDD");
         if (months <= 0) return result.setPassResult("Deposit months has to be positive");
         if (days < 0) return result.setPassResult("Deposit days has to be positive");
         /*String[] insertionTimeSplit = insertionTime.split("-");
