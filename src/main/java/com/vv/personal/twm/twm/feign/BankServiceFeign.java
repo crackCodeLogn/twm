@@ -31,6 +31,9 @@ public interface BankServiceFeign {
     @PostMapping("/banking/fd/deleteFd")
     String deleteFd(@RequestBody String fdKey);
 
+    @GetMapping("/banking/fd/update?fdKey={fdKey}")
+    String updateFd(@PathVariable("fdKey") String fdKey);
+
     @GetMapping("/banking/fd/getFds?field={field}&value={value}")
     FixedDepositProto.FixedDepositList getFds(@PathVariable("field") String field,
                                               @PathVariable("value") String value);

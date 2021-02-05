@@ -13,8 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collection;
-import java.util.LinkedList;
+import java.util.*;
 
 import static com.vv.personal.twm.twm.constants.Constants.EMPTY_STR;
 import static com.vv.personal.twm.twm.constants.Constants.FAILED;
@@ -156,21 +155,70 @@ public class BankController {
         return "FAILED!!";
     }
 
+    @GetMapping("/manual/fd/compute-computables")
+    @ApiOperation(value = "compute FD details on all FD and update DB")
+    public void computeComputables() {
+        LOGGER.info("Initiating computing of computables in all FD");
+        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FdFields.ALL, EMPTY_STR);
+        fixedDepositList.getFixedDepositsList().stream()
+                .filter(fixedDeposit -> !fixedDeposit.getFdNumber().isEmpty())
+                .forEach(fixedDeposit -> bankServiceFeign.updateFd(fixedDeposit.getFdNumber()));
+        LOGGER.info("Completed computing of computables in all FD");
+    }
+
+
     @GetMapping("/fd/getFixedDeposits")
-    @ApiOperation(value = "get FD(s) on fields")
-    public String getFixedDeposits(FdFields fdFields,
-                                   String searchValue) {
+    @ApiOperation(value = "get FD(s) on fields", hidden = true)
+    public FixedDepositProto.FixedDepositList getFixedDeposits(FdFields fdFields,
+                                                               String searchValue) {
         FixedDepositProto.FixedDepositList fdQueryResponse;
         try {
             fdQueryResponse = fdFields != FdFields.ALL
                     ? bankServiceFeign.getFds(fdFields.name(), searchValue)
                     : getAllFixedDeposits();
             LOGGER.info("FD query resp: {}", fdQueryResponse);
+            return fdQueryResponse;
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's getFds end-point. ", e);
-            return FAILED;
         }
+        return FixedDepositProto.FixedDepositList.newBuilder().build();
+    }
 
+    @GetMapping("/manual/fd/getFixedDeposits")
+    @ApiOperation(value = "get FD(s) on fields")
+    public String getFixedDepositsManually(FdFields fdFields,
+                                           String searchValue,
+                                           @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy) {
+        FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdFields, searchValue);
+        List<FixedDepositProto.FixedDeposit> fixedDepositList = new ArrayList<>(fdQueryResponse.getFixedDepositsList());
+        Optional<FixedDepositProto.FixedDeposit> aggFd = fixedDepositList.stream().filter(fixedDeposit -> fixedDeposit.getFdNumber().isEmpty()).findFirst();
+        aggFd.ifPresent(fixedDepositList::remove);
+
+        Comparator<FixedDepositProto.FixedDeposit> orderingComparator = null;
+        switch (orderBy) {
+            case START_DATE:
+                orderingComparator = Comparator.comparing(FixedDepositProto.FixedDeposit::getStartDate);
+                break;
+            case END_DATE:
+                orderingComparator = Comparator.comparing(FixedDepositProto.FixedDeposit::getEndDate);
+                break;
+            case DEPOSIT_AMOUNT:
+                orderingComparator = Comparator.comparing(FixedDepositProto.FixedDeposit::getDepositAmount);
+                break;
+            case RATE_OF_INTEREST:
+                orderingComparator = Comparator.comparing(FixedDepositProto.FixedDeposit::getRateOfInterest);
+                break;
+            case MONTHS:
+                orderingComparator = Comparator.comparing(FixedDepositProto.FixedDeposit::getMonths);
+                break;
+            case UNRECOGNIZED:
+                break;
+        }
+        fixedDepositList.sort(orderingComparator);
+        fdQueryResponse = FixedDepositProto.FixedDepositList.newBuilder()
+                .addAllFixedDeposits(fixedDepositList)
+                .addFixedDeposits(aggFd.orElseGet(() -> FixedDepositProto.FixedDeposit.newBuilder().build()))
+                .build();
         try {
             String rendOutput = renderServiceFeign.rendFds(fdQueryResponse);
             LOGGER.info("HTML table output:-\n{}", rendOutput);
