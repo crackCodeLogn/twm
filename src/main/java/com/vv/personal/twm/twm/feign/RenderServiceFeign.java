@@ -18,4 +18,7 @@ public interface RenderServiceFeign {
 
     @PostMapping("/render/rendFds")
     String rendFds(@RequestBody FixedDepositProto.FixedDepositList fixedDepositList);
+
+    @PostMapping("/render/rendFdsWithAnnualBreakdown")
+    String rendFdsWithAnnualBreakdown(@RequestBody FixedDepositProto.FixedDepositList fixedDepositList);
 }

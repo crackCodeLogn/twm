@@ -160,7 +160,7 @@ public class BankController {
     public void computeComputables() {
         LOGGER.info("Initiating computing of computables in all FD");
         FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FdFields.ALL, EMPTY_STR);
-        fixedDepositList.getFixedDepositsList().stream()
+        fixedDepositList.getFixedDepositList().stream()
                 .filter(fixedDeposit -> !fixedDeposit.getFdNumber().isEmpty())
                 .forEach(fixedDeposit -> bankServiceFeign.updateFd(fixedDeposit.getFdNumber()));
         LOGGER.info("Completed computing of computables in all FD");
@@ -190,7 +190,7 @@ public class BankController {
                                            String searchValue,
                                            @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy) {
         FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdFields, searchValue);
-        List<FixedDepositProto.FixedDeposit> fixedDepositList = new ArrayList<>(fdQueryResponse.getFixedDepositsList());
+        List<FixedDepositProto.FixedDeposit> fixedDepositList = new ArrayList<>(fdQueryResponse.getFixedDepositList());
         Optional<FixedDepositProto.FixedDeposit> aggFd = fixedDepositList.stream().filter(fixedDeposit -> fixedDeposit.getFdNumber().isEmpty()).findFirst();
         aggFd.ifPresent(fixedDepositList::remove);
 
@@ -216,8 +216,8 @@ public class BankController {
         }
         fixedDepositList.sort(orderingComparator);
         fdQueryResponse = FixedDepositProto.FixedDepositList.newBuilder()
-                .addAllFixedDeposits(fixedDepositList)
-                .addFixedDeposits(aggFd.orElseGet(() -> FixedDepositProto.FixedDeposit.newBuilder().build()))
+                .addAllFixedDeposit(fixedDepositList)
+                .addFixedDeposit(aggFd.orElseGet(() -> FixedDepositProto.FixedDeposit.newBuilder().build()))
                 .build();
         try {
             String rendOutput = renderServiceFeign.rendFds(fdQueryResponse);
@@ -227,6 +227,15 @@ public class BankController {
             LOGGER.error("Failed to call / process rendering service's rendBanks end-point. ", e);
         }
         return FAILED;
+    }
+
+    @GetMapping("/fd/getFixedDepositsAnnualBreakdown")
+    @ApiOperation(value = "get FD(s) on fields")
+    public String getFixedDepositsAnnualBreakdown(FdFields fdFields,
+                                                  String searchValue) {
+        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(fdFields.name(), searchValue);
+
+        return renderServiceFeign.rendFdsWithAnnualBreakdown(fdQueryResponse);
     }
 
     public BankProto.BankList getAllBanks() {

@@ -37,4 +37,8 @@ public interface BankServiceFeign {
     @GetMapping("/banking/fd/getFds?field={field}&value={value}")
     FixedDepositProto.FixedDepositList getFds(@PathVariable("field") String field,
                                               @PathVariable("value") String value);
+
+    @GetMapping("/banking/fd/annual-breakdown?field={field}&value={value}")
+    FixedDepositProto.FixedDepositList generateAnnualBreakdownForExistingFds(@PathVariable("field") String field,
+                                                                             @PathVariable("value") String value);
 }
