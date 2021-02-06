@@ -3,7 +3,6 @@ package com.vv.personal.twm.twm.controller;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.twm.constants.BankFields;
-import com.vv.personal.twm.twm.constants.FdFields;
 import com.vv.personal.twm.twm.feign.BankServiceFeign;
 import com.vv.personal.twm.twm.feign.RenderServiceFeign;
 import com.vv.personal.twm.twm.util.DateUtil;
@@ -100,6 +99,7 @@ public class BankController {
     @GetMapping("/fd/addFd")
     @ApiOperation(value = "add new FD entry")
     private String addFixedDeposit(@RequestParam(defaultValue = "V2") String user,
+                                   @RequestParam(defaultValue = "V2") String originalUser,
                                    @RequestParam(defaultValue = "12345678901") String fdNumber, //the Key/FD
                                    @RequestParam(defaultValue = "12345678901") String customerId,
                                    @RequestParam(defaultValue = "ABCD0123456") String bankIfsc,
@@ -118,6 +118,7 @@ public class BankController {
 
         FixedDepositProto.FixedDeposit.Builder fixedDepositBuilder = FixedDepositProto.FixedDeposit.newBuilder()
                 .setUser(user)
+                .setOriginalUser(originalUser)
                 .setFdNumber(fdNumber)
                 .setCustomerId(customerId)
                 .setBankIFSC(bankIfsc)
@@ -159,7 +160,7 @@ public class BankController {
     @ApiOperation(value = "compute FD details on all FD and update DB")
     public void computeComputables() {
         LOGGER.info("Initiating computing of computables in all FD");
-        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FdFields.ALL, EMPTY_STR);
+        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FixedDepositProto.FilterBy.ALL, EMPTY_STR);
         fixedDepositList.getFixedDepositList().stream()
                 .filter(fixedDeposit -> !fixedDeposit.getFdNumber().isEmpty())
                 .forEach(fixedDeposit -> bankServiceFeign.updateFd(fixedDeposit.getFdNumber()));
@@ -169,12 +170,12 @@ public class BankController {
 
     @GetMapping("/fd/getFixedDeposits")
     @ApiOperation(value = "get FD(s) on fields", hidden = true)
-    public FixedDepositProto.FixedDepositList getFixedDeposits(FdFields fdFields,
+    public FixedDepositProto.FixedDepositList getFixedDeposits(FixedDepositProto.FilterBy fdField,
                                                                String searchValue) {
         FixedDepositProto.FixedDepositList fdQueryResponse;
         try {
-            fdQueryResponse = fdFields != FdFields.ALL
-                    ? bankServiceFeign.getFds(fdFields.name(), searchValue)
+            fdQueryResponse = fdField != FixedDepositProto.FilterBy.ALL
+                    ? bankServiceFeign.getFds(fdField.name(), searchValue)
                     : getAllFixedDeposits();
             LOGGER.info("FD query resp: {}", fdQueryResponse);
             return fdQueryResponse;
@@ -186,10 +187,10 @@ public class BankController {
 
     @GetMapping("/manual/fd/getFixedDeposits")
     @ApiOperation(value = "get FD(s) on fields")
-    public String getFixedDepositsManually(FdFields fdFields,
+    public String getFixedDepositsManually(FixedDepositProto.FilterBy fdField,
                                            String searchValue,
                                            @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy) {
-        FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdFields, searchValue);
+        FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdField, searchValue);
         List<FixedDepositProto.FixedDeposit> fixedDepositList = new ArrayList<>(fdQueryResponse.getFixedDepositList());
         Optional<FixedDepositProto.FixedDeposit> aggFd = fixedDepositList.stream().filter(fixedDeposit -> fixedDeposit.getFdNumber().isEmpty()).findFirst();
         aggFd.ifPresent(fixedDepositList::remove);
@@ -231,9 +232,9 @@ public class BankController {
 
     @GetMapping("/fd/getFixedDepositsAnnualBreakdown")
     @ApiOperation(value = "get FD(s) on fields")
-    public String getFixedDepositsAnnualBreakdown(FdFields fdFields,
+    public String getFixedDepositsAnnualBreakdown(FixedDepositProto.FilterBy fdField,
                                                   String searchValue) {
-        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(fdFields.name(), searchValue);
+        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(fdField.name(), searchValue);
 
         return renderServiceFeign.rendFdsWithAnnualBreakdown(fdQueryResponse);
     }
@@ -243,7 +244,7 @@ public class BankController {
     }
 
     public FixedDepositProto.FixedDepositList getAllFixedDeposits() {
-        return bankServiceFeign.getFds(FdFields.ALL.name(), EMPTY_STR);
+        return bankServiceFeign.getFds(FixedDepositProto.FilterBy.ALL.name(), EMPTY_STR);
     }
 
     public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days) {
