@@ -2,6 +2,7 @@ package com.vv.personal.twm.twm.controller;
 
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
+import com.vv.personal.twm.ping.processor.Pinger;
 import com.vv.personal.twm.twm.constants.BankFields;
 import com.vv.personal.twm.twm.feign.BankServiceFeign;
 import com.vv.personal.twm.twm.feign.RenderServiceFeign;
@@ -12,7 +13,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 import static com.vv.personal.twm.twm.constants.Constants.EMPTY_STR;
 import static com.vv.personal.twm.twm.constants.Constants.FAILED;
@@ -32,19 +36,16 @@ public class BankController {
     @Autowired
     private RenderServiceFeign renderServiceFeign;
 
-    private final Collection<BankProto.Bank> bankCollection = new LinkedList<>();
-
-    /*@PostConstruct
-    public void postHaste() {
-        String banksQueryResponse = getAllBanks();
-        Type collectionType = new TypeToken<Collection<BankProto.Bank>>() {
-        }.getType();
-        bankCollection = GSON.fromJson(banksQueryResponse, collectionType);
-    }*/
+    @Autowired
+    private Pinger pinger;
 
     @GetMapping("/banks/addBank")
     @ApiOperation(value = "add new bank entry")
     private String addBank(String bank, String bankIfsc, String contactNumber, BankProto.BankType bankType) {
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
         BankProto.Bank newBank = BankProto.Bank.newBuilder()
                 .setName(bank)
                 .setIFSC(bankIfsc)
@@ -63,6 +64,10 @@ public class BankController {
     @PostMapping("/banks/deleteBank")
     @ApiOperation(value = "delete bank on IFSC code")
     public String deleteBank(String ifscToDelete) {
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
         try {
             return bankServiceFeign.deleteBank(ifscToDelete);
         } catch (Exception e) {
@@ -75,6 +80,10 @@ public class BankController {
     @ApiOperation(value = "get bank(s) on fields")
     public String getBanks(BankFields bankField,
                            String searchValue) {
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
         BankProto.BankList banksQueryResponse;
         try {
             banksQueryResponse = bankField != BankFields.ALL
@@ -110,6 +119,10 @@ public class BankController {
                                    @RequestParam(required = false, defaultValue = "0") int days,
                                    FixedDepositProto.InterestType interestType,
                                    @RequestParam String nominee) {
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
         final InspectResult inputVerificationResult = inspectInput(fdNumber, customerId, bankIfsc, depositAmount, rateOfInterest, startDate, months, days);
         if (!inputVerificationResult.isPass()) {
             LOGGER.warn("New FD input failed due to incorrect entries => {}. Retry with correct details", inputVerificationResult.getPassResult());
@@ -148,6 +161,10 @@ public class BankController {
     @PostMapping("/fd/deleteFixedDeposit")
     @ApiOperation(value = "delete FD on supplied key")
     public String deleteFixedDeposit(String fdKey) {
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
         try {
             return bankServiceFeign.deleteFd(fdKey);
         } catch (Exception e) {
@@ -172,6 +189,10 @@ public class BankController {
     @ApiOperation(value = "get FD(s) on fields", hidden = true)
     public FixedDepositProto.FixedDepositList getFixedDeposits(FixedDepositProto.FilterBy fdField,
                                                                String searchValue) {
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return FixedDepositProto.FixedDepositList.newBuilder().build();
+        }
         FixedDepositProto.FixedDepositList fdQueryResponse;
         try {
             fdQueryResponse = fdField != FixedDepositProto.FilterBy.ALL
@@ -190,6 +211,10 @@ public class BankController {
     public String getFixedDepositsManually(FixedDepositProto.FilterBy fdField,
                                            String searchValue,
                                            @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy) {
+        if (!pinger.allEndPointsActive(renderServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
         FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdField, searchValue);
         List<FixedDepositProto.FixedDeposit> fixedDepositList = new ArrayList<>(fdQueryResponse.getFixedDepositList());
         Optional<FixedDepositProto.FixedDeposit> aggFd = fixedDepositList.stream().filter(fixedDeposit -> fixedDeposit.getFdNumber().isEmpty()).findFirst();
@@ -234,6 +259,10 @@ public class BankController {
     @ApiOperation(value = "get FD(s) on fields")
     public String getFixedDepositsAnnualBreakdown(FixedDepositProto.FilterBy fdField,
                                                   String searchValue) {
+        if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
         FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(fdField.name(), searchValue);
 
         return renderServiceFeign.rendFdsWithAnnualBreakdown(fdQueryResponse);
