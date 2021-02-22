@@ -46,6 +46,7 @@ public class BankController {
     @GetMapping("/banks/addBank")
     @ApiOperation(value = "add new bank entry")
     private String addBank(String bank, String bankIfsc, String contactNumber, BankProto.BankType bankType) {
+        LOGGER.info("Adding new bank: {} x {}", bank, bankIfsc);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
@@ -68,6 +69,7 @@ public class BankController {
     @PostMapping("/banks/deleteBank")
     @ApiOperation(value = "delete bank on IFSC code")
     public String deleteBank(String ifscToDelete) {
+        LOGGER.info("Deleting bank IFSC: {}", ifscToDelete);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
@@ -84,6 +86,7 @@ public class BankController {
     @ApiOperation(value = "get bank(s) on fields")
     public String getBanks(BankFields bankField,
                            String searchValue) {
+        LOGGER.info("Retrieving banks on {} x {}", bankField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
@@ -123,6 +126,7 @@ public class BankController {
                                    @RequestParam(required = false, defaultValue = "0") int days,
                                    FixedDepositProto.InterestType interestType,
                                    @RequestParam String nominee) {
+        LOGGER.info("Adding new FD of {}", depositAmount);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
@@ -165,6 +169,7 @@ public class BankController {
     @PostMapping("/fd/deleteFixedDeposit")
     @ApiOperation(value = "delete FD on supplied key")
     public String deleteFixedDeposit(String fdKey) {
+        LOGGER.info("Deleting FD: {}", fdKey);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
@@ -193,6 +198,7 @@ public class BankController {
     @ApiOperation(value = "get FD(s) on fields", hidden = true)
     public FixedDepositProto.FixedDepositList getFixedDeposits(FixedDepositProto.FilterBy fdField,
                                                                String searchValue) {
+        LOGGER.info("Retrieving all FDs on {} x {}", fdField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return FixedDepositProto.FixedDepositList.newBuilder().build();
@@ -215,6 +221,7 @@ public class BankController {
     public String getFixedDepositsManually(FixedDepositProto.FilterBy fdField,
                                            String searchValue,
                                            @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy) {
+        LOGGER.info("Retrieving all FDs on {} x {}, sorted on {}", fdField, searchValue, orderBy);
         if (!pinger.allEndPointsActive(renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
@@ -263,6 +270,7 @@ public class BankController {
     @ApiOperation(value = "get FD(s) on fields")
     public String getFixedDepositsAnnualBreakdown(FixedDepositProto.FilterBy fdField,
                                                   String searchValue) {
+        LOGGER.info("Retrieving FD annual breakdown calculation for {} x {}", fdField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
