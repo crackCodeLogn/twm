@@ -5,6 +5,7 @@ import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.ping.processor.Pinger;
 import com.vv.personal.twm.twm.constants.BankFields;
 import com.vv.personal.twm.twm.feign.BankServiceFeign;
+import com.vv.personal.twm.twm.feign.CalcServiceFeign;
 import com.vv.personal.twm.twm.feign.RenderServiceFeign;
 import com.vv.personal.twm.twm.util.DateUtil;
 import io.swagger.annotations.ApiOperation;
@@ -35,6 +36,9 @@ public class BankController {
 
     @Autowired
     private RenderServiceFeign renderServiceFeign;
+
+    @Autowired
+    private CalcServiceFeign calcServiceFeign;
 
     @Autowired
     private Pinger pinger;
@@ -80,7 +84,7 @@ public class BankController {
     @ApiOperation(value = "get bank(s) on fields")
     public String getBanks(BankFields bankField,
                            String searchValue) {
-        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+        if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
         }
