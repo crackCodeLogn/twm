@@ -269,13 +269,14 @@ public class BankController {
     @GetMapping("/fd/getFixedDepositsAnnualBreakdown")
     @ApiOperation(value = "get FD(s) on fields")
     public String getFixedDepositsAnnualBreakdown(FixedDepositProto.FilterBy fdField,
-                                                  String searchValue) {
+                                                  String searchValue,
+                                                  @RequestParam(defaultValue = "", required = false) String excludeOnBankIfsc) {
         LOGGER.info("Retrieving FD annual breakdown calculation for {} x {}", fdField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
         }
-        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(fdField.name(), searchValue);
+        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(fdField.name(), searchValue, excludeOnBankIfsc);
 
         return renderServiceFeign.rendFdsWithAnnualBreakdown(fdQueryResponse);
     }
