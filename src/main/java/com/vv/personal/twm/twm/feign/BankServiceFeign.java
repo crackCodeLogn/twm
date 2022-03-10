@@ -16,31 +16,34 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient("twm-bank-service")
 public interface BankServiceFeign extends HealthFeign {
 
-    @PostMapping("/banking/banks/addBank")
-    String addBank(@RequestBody BankProto.Bank newBank);
+    @PostMapping("/banking/banks/{db}/addBank")
+    String addBank(@PathVariable("db") String db, @RequestBody BankProto.Bank newBank);
 
-    @PostMapping("/banking/banks/deleteBank")
-    String deleteBank(@RequestBody String ifscToDelete);
+    @PostMapping("/banking/banks/{db}/deleteBank")
+    String deleteBank(@PathVariable("db") String db, @RequestBody String ifscToDelete);
 
-    @GetMapping("/banking/banks/getBanks?field={field}&value={value}")
-    BankProto.BankList getBanks(@PathVariable("field") String field,
+    @GetMapping("/banking/banks/{db}/getBanks?field={field}&value={value}")
+    BankProto.BankList getBanks(@PathVariable("db") String db,
+                                @PathVariable("field") String field,
                                 @PathVariable("value") String value);
 
-    @PostMapping("/banking/fd/addFd")
-    String addFd(@RequestBody FixedDepositProto.FixedDeposit newFixedDeposit);
+    @PostMapping("/banking/fd/{db}/addFd")
+    String addFd(@PathVariable("db") String db, @RequestBody FixedDepositProto.FixedDeposit newFixedDeposit);
 
-    @PostMapping("/banking/fd/deleteFd")
-    String deleteFd(@RequestBody String fdKey);
+    @PostMapping("/banking/fd/{db}/deleteFd")
+    String deleteFd(@PathVariable("db") String db, @RequestBody String fdKey);
 
-    @GetMapping("/banking/fd/update?fdKey={fdKey}")
-    String updateFd(@PathVariable("fdKey") String fdKey);
+    @GetMapping("/banking/fd/{db}/update?fdKey={fdKey}")
+    String updateFd(@PathVariable("db") String db, @PathVariable("fdKey") String fdKey);
 
-    @GetMapping("/banking/fd/getFds?field={field}&value={value}")
-    FixedDepositProto.FixedDepositList getFds(@PathVariable("field") String field,
+    @GetMapping("/banking/fd/{db}/getFds?field={field}&value={value}")
+    FixedDepositProto.FixedDepositList getFds(@PathVariable("db") String db,
+                                              @PathVariable("field") String field,
                                               @PathVariable("value") String value);
 
-    @GetMapping("/banking/fd/annual-breakdown?field={field}&value={value}&excludeOnBankIfsc={excludeOnBankIfsc}")
-    FixedDepositProto.FixedDepositList generateAnnualBreakdownForExistingFds(@PathVariable("field") String field,
+    @GetMapping("/banking/fd/{db}/annual-breakdown?field={field}&value={value}&excludeOnBankIfsc={excludeOnBankIfsc}")
+    FixedDepositProto.FixedDepositList generateAnnualBreakdownForExistingFds(@PathVariable("db") String db,
+                                                                             @PathVariable("field") String field,
                                                                              @PathVariable("value") String value,
                                                                              @PathVariable("excludeOnBankIfsc") String excludeOnBankIfsc);
 }

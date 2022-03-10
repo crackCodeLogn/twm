@@ -5,14 +5,17 @@ import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.ping.processor.Pinger;
 import com.vv.personal.twm.twm.constants.BankFields;
 import com.vv.personal.twm.twm.feign.BankServiceFeign;
-import com.vv.personal.twm.twm.feign.CalcServiceFeign;
 import com.vv.personal.twm.twm.feign.RenderServiceFeign;
 import com.vv.personal.twm.twm.util.DateUtil;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -38,14 +41,12 @@ public class BankController {
     private RenderServiceFeign renderServiceFeign;
 
     @Autowired
-    private CalcServiceFeign calcServiceFeign;
-
-    @Autowired
     private Pinger pinger;
 
     @GetMapping("/banks/addBank")
     @ApiOperation(value = "add new bank entry")
-    private String addBank(String bank, String bankIfsc, String contactNumber, BankProto.BankType bankType) {
+    private String addBank(String bank, String bankIfsc, String contactNumber, BankProto.BankType bankType,
+                           String db) {
         LOGGER.info("Adding new bank: {} x {}", bank, bankIfsc);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
@@ -59,7 +60,7 @@ public class BankController {
                 .build();
         LOGGER.info("Took input a new bank => '{}'", newBank);
         try {
-            return bankServiceFeign.addBank(newBank);
+            return bankServiceFeign.addBank(db, newBank);
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's addBank end-point. ", e);
         }
@@ -68,14 +69,14 @@ public class BankController {
 
     @PostMapping("/banks/deleteBank")
     @ApiOperation(value = "delete bank on IFSC code")
-    public String deleteBank(String ifscToDelete) {
+    public String deleteBank(String ifscToDelete, String db) {
         LOGGER.info("Deleting bank IFSC: {}", ifscToDelete);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
         }
         try {
-            return bankServiceFeign.deleteBank(ifscToDelete);
+            return bankServiceFeign.deleteBank(db, ifscToDelete);
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's deleteBank end-point. ", e);
         }
@@ -85,7 +86,7 @@ public class BankController {
     @GetMapping("/banks/getBanks")
     @ApiOperation(value = "get bank(s) on fields")
     public String getBanks(BankFields bankField,
-                           String searchValue) {
+                           String searchValue, String db) {
         LOGGER.info("Retrieving banks on {} x {}", bankField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
@@ -94,8 +95,8 @@ public class BankController {
         BankProto.BankList banksQueryResponse;
         try {
             banksQueryResponse = bankField != BankFields.ALL
-                    ? bankServiceFeign.getBanks(bankField.name(), searchValue)
-                    : getAllBanks();
+                    ? bankServiceFeign.getBanks(db, bankField.name(), searchValue)
+                    : getAllBanks(db);
             LOGGER.info("Banks query resp: {}", banksQueryResponse);
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's getBanks end-point. ", e);
@@ -125,7 +126,8 @@ public class BankController {
                                    @RequestParam(defaultValue = "25") int months,
                                    @RequestParam(required = false, defaultValue = "0") int days,
                                    FixedDepositProto.InterestType interestType,
-                                   @RequestParam String nominee) {
+                                   @RequestParam String nominee,
+                                   String db) {
         LOGGER.info("Adding new FD of {}", depositAmount);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
@@ -157,7 +159,7 @@ public class BankController {
 
         LOGGER.info("Took input a new FD => '{}'", fixedDeposit.getFdNumber());
         try {
-            String bankCallResult = bankServiceFeign.addFd(fixedDeposit);
+            String bankCallResult = bankServiceFeign.addFd(db, fixedDeposit);
             LOGGER.info("Result from bank service call => {}", bankCallResult);
             return bankCallResult;
         } catch (Exception e) {
@@ -168,14 +170,14 @@ public class BankController {
 
     @PostMapping("/fd/deleteFixedDeposit")
     @ApiOperation(value = "delete FD on supplied key")
-    public String deleteFixedDeposit(String fdKey) {
+    public String deleteFixedDeposit(String fdKey, String db) {
         LOGGER.info("Deleting FD: {}", fdKey);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
         }
         try {
-            return bankServiceFeign.deleteFd(fdKey);
+            return bankServiceFeign.deleteFd(db, fdKey);
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's deleteFd end-point. ", e);
         }
@@ -184,12 +186,12 @@ public class BankController {
 
     @GetMapping("/manual/fd/compute-computables")
     @ApiOperation(value = "compute FD details on all FD and update DB")
-    public void computeComputables() {
+    public void computeComputables(String db) {
         LOGGER.info("Initiating computing of computables in all FD");
-        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FixedDepositProto.FilterBy.ALL, EMPTY_STR);
+        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FixedDepositProto.FilterBy.ALL, EMPTY_STR, db);
         fixedDepositList.getFixedDepositList().stream()
                 .filter(fixedDeposit -> !fixedDeposit.getFdNumber().isEmpty())
-                .forEach(fixedDeposit -> bankServiceFeign.updateFd(fixedDeposit.getFdNumber()));
+                .forEach(fixedDeposit -> bankServiceFeign.updateFd(db, fixedDeposit.getFdNumber()));
         LOGGER.info("Completed computing of computables in all FD");
     }
 
@@ -197,7 +199,7 @@ public class BankController {
     @GetMapping("/fd/getFixedDeposits")
     @ApiOperation(value = "get FD(s) on fields", hidden = true)
     public FixedDepositProto.FixedDepositList getFixedDeposits(FixedDepositProto.FilterBy fdField,
-                                                               String searchValue) {
+                                                               String searchValue, String db) {
         LOGGER.info("Retrieving all FDs on {} x {}", fdField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
@@ -206,8 +208,8 @@ public class BankController {
         FixedDepositProto.FixedDepositList fdQueryResponse;
         try {
             fdQueryResponse = fdField != FixedDepositProto.FilterBy.ALL
-                    ? bankServiceFeign.getFds(fdField.name(), searchValue)
-                    : getAllFixedDeposits();
+                    ? bankServiceFeign.getFds(db, fdField.name(), searchValue)
+                    : getAllFixedDeposits(db);
             LOGGER.info("FD query resp: {}", fdQueryResponse);
             return fdQueryResponse;
         } catch (Exception e) {
@@ -220,13 +222,14 @@ public class BankController {
     @ApiOperation(value = "get FD(s) on fields")
     public String getFixedDepositsManually(FixedDepositProto.FilterBy fdField,
                                            String searchValue,
-                                           @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy) {
+                                           @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy,
+                                           String db) {
         LOGGER.info("Retrieving all FDs on {} x {}, sorted on {}", fdField, searchValue, orderBy);
         if (!pinger.allEndPointsActive(renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
         }
-        FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdField, searchValue);
+        FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdField, searchValue, db);
         List<FixedDepositProto.FixedDeposit> fixedDepositList = new ArrayList<>(fdQueryResponse.getFixedDepositList());
         Optional<FixedDepositProto.FixedDeposit> aggFd = fixedDepositList.stream().filter(fixedDeposit -> fixedDeposit.getFdNumber().isEmpty()).findFirst();
         aggFd.ifPresent(fixedDepositList::remove);
@@ -270,23 +273,24 @@ public class BankController {
     @ApiOperation(value = "get FD(s) on fields")
     public String getFixedDepositsAnnualBreakdown(FixedDepositProto.FilterBy fdField,
                                                   String searchValue,
-                                                  @RequestParam(defaultValue = "", required = false) String excludeOnBankIfsc) {
+                                                  @RequestParam(defaultValue = "", required = false) String excludeOnBankIfsc,
+                                                  String db) {
         LOGGER.info("Retrieving FD annual breakdown calculation for {} x {}", fdField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
         }
-        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(fdField.name(), searchValue, excludeOnBankIfsc);
+        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(db, fdField.name(), searchValue, excludeOnBankIfsc);
 
         return renderServiceFeign.rendFdsWithAnnualBreakdown(fdQueryResponse);
     }
 
-    public BankProto.BankList getAllBanks() {
-        return bankServiceFeign.getBanks(BankFields.ALL.name(), EMPTY_STR);
+    public BankProto.BankList getAllBanks(String db) {
+        return bankServiceFeign.getBanks(db, BankFields.ALL.name(), EMPTY_STR);
     }
 
-    public FixedDepositProto.FixedDepositList getAllFixedDeposits() {
-        return bankServiceFeign.getFds(FixedDepositProto.FilterBy.ALL.name(), EMPTY_STR);
+    public FixedDepositProto.FixedDepositList getAllFixedDeposits(String db) {
+        return bankServiceFeign.getFds(db, FixedDepositProto.FilterBy.ALL.name(), EMPTY_STR);
     }
 
     public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days) {
