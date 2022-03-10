@@ -46,7 +46,7 @@ public class BankController {
     @GetMapping("/banks/addBank")
     @ApiOperation(value = "add new bank entry")
     private String addBank(String bank, String bankIfsc, String contactNumber, BankProto.BankType bankType,
-                           String db) {
+                           Boolean isBankActive, String db) {
         LOGGER.info("Adding new bank: {} x {}", bank, bankIfsc);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
@@ -57,6 +57,7 @@ public class BankController {
                 .setIFSC(bankIfsc)
                 .setContactNumber(contactNumber)
                 .setBankType(bankType)
+                .setIsActive(isBankActive)
                 .build();
         LOGGER.info("Took input a new bank => '{}'", newBank);
         try {
@@ -127,6 +128,7 @@ public class BankController {
                                    @RequestParam(required = false, defaultValue = "0") int days,
                                    FixedDepositProto.InterestType interestType,
                                    @RequestParam String nominee,
+                                   @RequestParam Boolean isFdActive,
                                    String db) {
         LOGGER.info("Adding new FD of {}", depositAmount);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
@@ -151,6 +153,7 @@ public class BankController {
                 .setMonths(months)
                 .setDays(days)
                 .setInterestType(interestType)
+                .setIsFdActive(isFdActive)
                 .setNominee(nominee);
         //String fdKey = FixedDepositKeyUtil.generateFdKey(fixedDepositBuilder);
         FixedDepositProto.FixedDeposit fixedDeposit = fixedDepositBuilder
