@@ -11,11 +11,7 @@ import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -198,6 +194,12 @@ public class BankController {
         LOGGER.info("Completed computing of computables in all FD");
     }
 
+    @GetMapping("/manual/fd/update-active-status")
+    @ApiOperation(value = "update FD status")
+    public String updateFdActiveStatus(String db, String fdNumber, Boolean isActive) {
+        LOGGER.info("Initiating update of FD {} to status {}", fdNumber, isActive);
+        return bankServiceFeign.updateFdActiveStatus(db, fdNumber, isActive);
+    }
 
     @GetMapping("/fd/getFixedDeposits")
     @ApiOperation(value = "get FD(s) on fields", hidden = true)

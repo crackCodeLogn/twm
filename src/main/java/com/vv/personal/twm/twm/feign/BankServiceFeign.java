@@ -36,6 +36,11 @@ public interface BankServiceFeign extends HealthFeign {
     @GetMapping("/banking/fd/{db}/update?fdKey={fdKey}")
     String updateFd(@PathVariable("db") String db, @PathVariable("fdKey") String fdKey);
 
+    @GetMapping("/banking/fd/{db}/update/active?fdKey={fdKey}&isActive={isActive}")
+    String updateFdActiveStatus(@PathVariable("db") String db,
+                                @PathVariable("fdKey") String fdKey,
+                                @PathVariable("isActive") Boolean isActive);
+
     @GetMapping("/banking/fd/{db}/getFds?field={field}&value={value}")
     FixedDepositProto.FixedDepositList getFds(@PathVariable("db") String db,
                                               @PathVariable("field") String field,
