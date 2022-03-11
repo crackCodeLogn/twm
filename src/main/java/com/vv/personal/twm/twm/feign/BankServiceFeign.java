@@ -41,10 +41,11 @@ public interface BankServiceFeign extends HealthFeign {
                                 @PathVariable("fdKey") String fdKey,
                                 @PathVariable("isActive") Boolean isActive);
 
-    @GetMapping("/banking/fd/{db}/getFds?field={field}&value={value}")
+    @GetMapping("/banking/fd/{db}/getFds?field={field}&value={value}&considerActiveFdOnly={considerActiveFdOnly}")
     FixedDepositProto.FixedDepositList getFds(@PathVariable("db") String db,
                                               @PathVariable("field") String field,
-                                              @PathVariable("value") String value);
+                                              @PathVariable("value") String value,
+                                              @PathVariable("considerActiveFdOnly") boolean considerActiveFdOnly);
 
     @GetMapping("/banking/fd/{db}/annual-breakdown?field={field}&value={value}&excludeOnBankIfsc={excludeOnBankIfsc}")
     FixedDepositProto.FixedDepositList generateAnnualBreakdownForExistingFds(@PathVariable("db") String db,

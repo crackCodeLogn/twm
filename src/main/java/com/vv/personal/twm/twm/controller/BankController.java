@@ -11,7 +11,11 @@ import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -185,9 +189,9 @@ public class BankController {
 
     @GetMapping("/manual/fd/compute-computables")
     @ApiOperation(value = "compute FD details on all FD and update DB")
-    public void computeComputables(String db) {
+    public void computeComputables(String db, boolean considerActiveFdOnly) {
         LOGGER.info("Initiating computing of computables in all FD");
-        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FixedDepositProto.FilterBy.ALL, EMPTY_STR, db);
+        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FixedDepositProto.FilterBy.ALL, EMPTY_STR, considerActiveFdOnly, db);
         fixedDepositList.getFixedDepositList().stream()
                 .filter(fixedDeposit -> !fixedDeposit.getFdNumber().isEmpty())
                 .forEach(fixedDeposit -> bankServiceFeign.updateFd(db, fixedDeposit.getFdNumber()));
@@ -204,7 +208,9 @@ public class BankController {
     @GetMapping("/fd/getFixedDeposits")
     @ApiOperation(value = "get FD(s) on fields", hidden = true)
     public FixedDepositProto.FixedDepositList getFixedDeposits(FixedDepositProto.FilterBy fdField,
-                                                               String searchValue, String db) {
+                                                               String searchValue,
+                                                               boolean considerActiveFdOnly,
+                                                               String db) {
         LOGGER.info("Retrieving all FDs on {} x {}", fdField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
@@ -213,8 +219,8 @@ public class BankController {
         FixedDepositProto.FixedDepositList fdQueryResponse;
         try {
             fdQueryResponse = fdField != FixedDepositProto.FilterBy.ALL
-                    ? bankServiceFeign.getFds(db, fdField.name(), searchValue)
-                    : getAllFixedDeposits(db);
+                    ? bankServiceFeign.getFds(db, fdField.name(), searchValue, considerActiveFdOnly)
+                    : getAllFixedDeposits(db, considerActiveFdOnly);
             LOGGER.info("FD query resp: {}", fdQueryResponse);
             return fdQueryResponse;
         } catch (Exception e) {
@@ -228,14 +234,17 @@ public class BankController {
     public String getFixedDepositsManually(FixedDepositProto.FilterBy fdField,
                                            String searchValue,
                                            @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy,
+                                           boolean considerActiveFdOnly,
                                            String db) {
         LOGGER.info("Retrieving all FDs on {} x {}, sorted on {}", fdField, searchValue, orderBy);
         if (!pinger.allEndPointsActive(renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
         }
-        FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdField, searchValue, db);
+        FixedDepositProto.FixedDepositList fdQueryResponse = getFixedDeposits(fdField, searchValue, considerActiveFdOnly, db);
         List<FixedDepositProto.FixedDeposit> fixedDepositList = new ArrayList<>(fdQueryResponse.getFixedDepositList());
+
+        //this aggFd is computed in the twm-bank-service
         Optional<FixedDepositProto.FixedDeposit> aggFd = fixedDepositList.stream().filter(fixedDeposit -> fixedDeposit.getFdNumber().isEmpty()).findFirst();
         aggFd.ifPresent(fixedDepositList::remove);
 
@@ -294,8 +303,8 @@ public class BankController {
         return bankServiceFeign.getBanks(db, BankFields.ALL.name(), EMPTY_STR);
     }
 
-    public FixedDepositProto.FixedDepositList getAllFixedDeposits(String db) {
-        return bankServiceFeign.getFds(db, FixedDepositProto.FilterBy.ALL.name(), EMPTY_STR);
+    public FixedDepositProto.FixedDepositList getAllFixedDeposits(String db, boolean considerActiveFdOnly) {
+        return bankServiceFeign.getFds(db, FixedDepositProto.FilterBy.ALL.name(), EMPTY_STR, considerActiveFdOnly);
     }
 
     public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days) {
