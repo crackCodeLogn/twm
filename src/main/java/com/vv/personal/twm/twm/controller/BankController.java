@@ -11,11 +11,7 @@ import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -288,14 +284,14 @@ public class BankController {
     public String getFixedDepositsAnnualBreakdown(FixedDepositProto.FilterBy fdField,
                                                   String searchValue,
                                                   @RequestParam(defaultValue = "", required = false) String excludeOnBankIfsc,
+                                                  boolean considerActiveFdOnly,
                                                   String db) {
         LOGGER.info("Retrieving FD annual breakdown calculation for {} x {}", fdField, searchValue);
         if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
             return "END-POINTS NOT READY!";
         }
-        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(db, fdField.name(), searchValue, excludeOnBankIfsc);
-
+        FixedDepositProto.FixedDepositList fdQueryResponse = bankServiceFeign.generateAnnualBreakdownForExistingFds(db, fdField.name(), searchValue, excludeOnBankIfsc, considerActiveFdOnly);
         return renderServiceFeign.rendFdsWithAnnualBreakdown(fdQueryResponse);
     }
 
