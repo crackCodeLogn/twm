@@ -11,7 +11,11 @@ import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -307,7 +311,8 @@ public class BankController {
         final InspectResult result = new InspectResult().setPass(false);
         if (!fdNumber.matches("[0-9]+")) return result.setPassResult("FD-number in incorrect format. Correct => [0-9]+");
         if (!customerId.matches("[0-9]+")) return result.setPassResult("CustomerId in incorrect format. Correct => [0-9]+");
-        if (!bankIfsc.matches("[A-Z]{4}[0-9]{7}") && !bankIfsc.matches("PO-[0-9]{6}")) return result.setPassResult("IFSC in incorrect format. Correct => [A-Z]{4}[0-9]{7} || PO-[0-9]{6}");
+        if (!bankIfsc.matches("[A-Z]{4}[0-9]{7}") && !bankIfsc.matches("PO-[0-9]{6}") && !bankIfsc.matches("[0-9]{5}"))
+            return result.setPassResult("IFSC in incorrect format. Correct => [A-Z]{4}[0-9]{7} || PO-[0-9]{6}");
         if (depositAmount <= 0.0) return result.setPassResult("Deposit amt has to be positive");
         if (rateOfInterest <= 0.0) return result.setPassResult("Rate of interest has to be positive");
         if (DateUtil.transmuteToLocalDate(startDate) == null) return result.setPassResult("Start date in incorrect format. Correct => YYYYMMDD");
@@ -334,11 +339,10 @@ public class BankController {
 
         @Override
         public String toString() {
-            final StringBuilder sb = new StringBuilder("InspectResult{");
-            sb.append("pass=").append(pass);
-            sb.append(", passResult='").append(passResult).append('\'');
-            sb.append('}');
-            return sb.toString();
+            String sb = "InspectResult{" + "pass=" + pass +
+                    ", passResult='" + passResult + '\'' +
+                    '}';
+            return sb;
         }
 
         public boolean isPass() {
