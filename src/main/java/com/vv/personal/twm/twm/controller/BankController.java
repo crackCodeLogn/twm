@@ -305,14 +305,16 @@ public class BankController {
 
     public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days) {
         final InspectResult result = new InspectResult().setPass(false);
-        if (!fdNumber.matches("[0-9]+")) return result.setPassResult("FD-number in incorrect format. Correct => [0-9]+");
+        if (!fdNumber.matches("[0-9-]+"))
+            return result.setPassResult("FD-number in incorrect format. Correct => [0-9-]+, your fd number is: " + fdNumber);
         if (!customerId.matches("[0-9]+"))
             return result.setPassResult("CustomerId in incorrect format. Correct => [0-9]+");
         if (!bankIfsc.matches("[A-Z]{4}[0-9]{7}") && !bankIfsc.matches("PO-[0-9]{6}") && !bankIfsc.matches("CIBC[0-9]{5}"))
             return result.setPassResult("IFSC in incorrect format. Correct => [A-Z]{4}[0-9]{7} || PO-[0-9]{6} || CIBC[0-9]{5}");
         if (depositAmount <= 0.0) return result.setPassResult("Deposit amt has to be positive");
         if (rateOfInterest <= 0.0) return result.setPassResult("Rate of interest has to be positive");
-        if (DateUtil.transmuteToLocalDate(startDate) == null) return result.setPassResult("Start date in incorrect format. Correct => YYYYMMDD");
+        if (DateUtil.transmuteToLocalDate(startDate) == null)
+            return result.setPassResult("Start date in incorrect format. Correct => YYYYMMDD");
         //if (DateUtil.transmuteToLocalDate(endDate) == null) return result.setPassResult("End date in incorrect format. Correct => YYYYMMDD");
         if (months <= 0) return result.setPassResult("Deposit months has to be positive");
         if (days < 0) return result.setPassResult("Deposit days has to be positive");
