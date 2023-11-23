@@ -7,7 +7,7 @@ import com.vv.personal.twm.twm.constants.BankFields;
 import com.vv.personal.twm.twm.feign.BankServiceFeign;
 import com.vv.personal.twm.twm.feign.RenderServiceFeign;
 import com.vv.personal.twm.twm.util.DateUtil;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +40,7 @@ public class BankController {
     private Pinger pinger;
 
     @GetMapping("/banks/addBank")
-    @ApiOperation(value = "add new bank entry")
+    @Operation(summary = "add new bank entry")
     private String addBank(String bank, String bankIfsc, String contactNumber, BankProto.BankType bankType,
                            Boolean isBankActive, String db) {
         LOGGER.info("Adding new bank: {} x {}", bank, bankIfsc);
@@ -65,7 +65,7 @@ public class BankController {
     }
 
     @PostMapping("/banks/deleteBank")
-    @ApiOperation(value = "delete bank on IFSC code")
+    @Operation(summary = "delete bank on IFSC code")
     public String deleteBank(String ifscToDelete, String db) {
         LOGGER.info("Deleting bank IFSC: {}", ifscToDelete);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
@@ -81,7 +81,7 @@ public class BankController {
     }
 
     @GetMapping("/banks/getBanks")
-    @ApiOperation(value = "get bank(s) on fields")
+    @Operation(summary = "get bank(s) on fields")
     public String getBanks(BankFields bankField,
                            String searchValue, String db) {
         LOGGER.info("Retrieving banks on {} x {}", bankField, searchValue);
@@ -111,7 +111,7 @@ public class BankController {
     }
 
     @GetMapping("/fd/addFd")
-    @ApiOperation(value = "add new FD entry")
+    @Operation(summary = "add new FD entry")
     private String addFixedDeposit(@RequestParam(defaultValue = "V2") String user,
                                    @RequestParam(defaultValue = "V2") String originalUser,
                                    @RequestParam(defaultValue = "12345678901") String fdNumber, //the Key/FD
@@ -168,7 +168,7 @@ public class BankController {
     }
 
     @PostMapping("/fd/deleteFixedDeposit")
-    @ApiOperation(value = "delete FD on supplied key")
+    @Operation(summary = "delete FD on supplied key")
     public String deleteFixedDeposit(String fdKey, String db) {
         LOGGER.info("Deleting FD: {}", fdKey);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
@@ -184,7 +184,7 @@ public class BankController {
     }
 
     @GetMapping("/manual/fd/compute-computables")
-    @ApiOperation(value = "compute FD details on all FD and update DB")
+    @Operation(summary = "compute FD details on all FD and update DB")
     public void computeComputables(String db, boolean considerActiveFdOnly) {
         LOGGER.info("Initiating computing of computables in all FD");
         FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FixedDepositProto.FilterBy.ALL, EMPTY_STR, considerActiveFdOnly, db);
@@ -195,14 +195,14 @@ public class BankController {
     }
 
     @GetMapping("/manual/fd/update-active-status")
-    @ApiOperation(value = "update FD status")
+    @Operation(summary = "update FD status")
     public String updateFdActiveStatus(String db, String fdNumber, Boolean isActive) {
         LOGGER.info("Initiating update of FD {} to status {}", fdNumber, isActive);
         return bankServiceFeign.updateFdActiveStatus(db, fdNumber, isActive);
     }
 
     @GetMapping("/fd/getFixedDeposits")
-    @ApiOperation(value = "get FD(s) on fields", hidden = true)
+    @Operation(summary = "get FD(s) on fields", hidden = true)
     public FixedDepositProto.FixedDepositList getFixedDeposits(FixedDepositProto.FilterBy fdField,
                                                                String searchValue,
                                                                boolean considerActiveFdOnly,
@@ -226,7 +226,7 @@ public class BankController {
     }
 
     @GetMapping("/manual/fd/getFixedDeposits")
-    @ApiOperation(value = "get FD(s) on fields")
+    @Operation(summary = "get FD(s) on fields")
     public String getFixedDepositsManually(FixedDepositProto.FilterBy fdField,
                                            String searchValue,
                                            @RequestParam(defaultValue = "startDate") FixedDepositProto.OrderFDsBy orderBy,
@@ -280,7 +280,7 @@ public class BankController {
     }
 
     @GetMapping("/fd/getFixedDepositsAnnualBreakdown")
-    @ApiOperation(value = "get FD(s) on fields")
+    @Operation(summary = "get FD(s) on fields")
     public String getFixedDepositsAnnualBreakdown(FixedDepositProto.FilterBy fdField,
                                                   String searchValue,
                                                   @RequestParam(defaultValue = "", required = false) String excludeOnBankIfsc,
