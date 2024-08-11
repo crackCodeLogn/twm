@@ -1,4 +1,4 @@
-package com.vv.personal.twm.twm.util;
+package com.vv.personal.twm.util;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -6,7 +6,7 @@ import org.junit.runners.JUnit4;
 
 import java.time.LocalTime;
 
-import static com.vv.personal.twm.twm.util.TimeUtil.transmuteToLocalTime;
+import static com.vv.personal.twm.util.TimeUtil.transmuteToLocalTime;
 import static org.junit.Assert.*;
 
 /**

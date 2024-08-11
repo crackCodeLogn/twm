@@ -1,12 +1,13 @@
-package com.vv.personal.twm.twm.controller;
+package com.vv.personal.twm.controller;
 
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
+import com.vv.personal.twm.constants.BankFields;
+import com.vv.personal.twm.constants.Constants;
+import com.vv.personal.twm.feign.BankServiceFeign;
+import com.vv.personal.twm.feign.RenderServiceFeign;
 import com.vv.personal.twm.ping.processor.Pinger;
-import com.vv.personal.twm.twm.constants.BankFields;
-import com.vv.personal.twm.twm.feign.BankServiceFeign;
-import com.vv.personal.twm.twm.feign.RenderServiceFeign;
-import com.vv.personal.twm.twm.util.DateUtil;
+import com.vv.personal.twm.util.DateUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,9 +18,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-
-import static com.vv.personal.twm.twm.constants.Constants.EMPTY_STR;
-import static com.vv.personal.twm.twm.constants.Constants.FAILED;
 
 /**
  * @author Vivek
@@ -97,7 +95,7 @@ public class BankController {
             LOGGER.info("Banks query resp: {}", banksQueryResponse);
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's getBanks end-point. ", e);
-            return FAILED;
+            return Constants.FAILED;
         }
 
         try {
@@ -107,7 +105,7 @@ public class BankController {
         } catch (Exception e) {
             LOGGER.error("Failed to call / process rendering service's rendBanks end-point. ", e);
         }
-        return FAILED;
+        return Constants.FAILED;
     }
 
     @GetMapping("/fd/addFd")
@@ -164,7 +162,7 @@ public class BankController {
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's addFd end-point. ", e);
         }
-        return FAILED;
+        return Constants.FAILED;
     }
 
     @PostMapping("/fd/deleteFixedDeposit")
@@ -187,7 +185,7 @@ public class BankController {
     @Operation(summary = "compute FD details on all FD and update DB")
     public void computeComputables(String db, boolean considerActiveFdOnly) {
         LOGGER.info("Initiating computing of computables in all FD");
-        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FixedDepositProto.FilterBy.ALL, EMPTY_STR, considerActiveFdOnly, db);
+        FixedDepositProto.FixedDepositList fixedDepositList = getFixedDeposits(FixedDepositProto.FilterBy.ALL, Constants.EMPTY_STR, considerActiveFdOnly, db);
         fixedDepositList.getFixedDepositList().stream()
                 .filter(fixedDeposit -> !fixedDeposit.getFdNumber().isEmpty())
                 .forEach(fixedDeposit -> bankServiceFeign.updateFd(db, fixedDeposit.getFdNumber()));
@@ -276,7 +274,7 @@ public class BankController {
         } catch (Exception e) {
             LOGGER.error("Failed to call / process rendering service's rendBanks end-point. ", e);
         }
-        return FAILED;
+        return Constants.FAILED;
     }
 
     @GetMapping("/fd/getFixedDepositsAnnualBreakdown")
@@ -296,11 +294,11 @@ public class BankController {
     }
 
     public BankProto.BankList getAllBanks(String db) {
-        return bankServiceFeign.getBanks(db, BankFields.ALL.name(), EMPTY_STR);
+        return bankServiceFeign.getBanks(db, BankFields.ALL.name(), Constants.EMPTY_STR);
     }
 
     public FixedDepositProto.FixedDepositList getAllFixedDeposits(String db, boolean considerActiveFdOnly) {
-        return bankServiceFeign.getFds(db, FixedDepositProto.FilterBy.ALL.name(), EMPTY_STR, considerActiveFdOnly);
+        return bankServiceFeign.getFds(db, FixedDepositProto.FilterBy.ALL.name(), Constants.EMPTY_STR, considerActiveFdOnly);
     }
 
     public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days) {

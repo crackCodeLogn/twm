@@ -1,4 +1,4 @@
-package com.vv.personal.twm.twm.constants;
+package com.vv.personal.twm.constants;
 
 /**
  * @author Vivek

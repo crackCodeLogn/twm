@@ -1,4 +1,4 @@
-package com.vv.personal.twm.twm.util;
+package com.vv.personal.twm.util;
 
 import com.google.gson.Gson;
 

@@ -1,8 +1,8 @@
-package com.vv.personal.twm.twm.feign;
+package com.vv.personal.twm.feign;
 
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
-import com.vv.personal.twm.ping.feign.HealthFeign;
+import com.vv.personal.twm.ping.remote.feign.PingFeign;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * @since 17/11/20
  */
 @FeignClient("twm-bank-service")
-public interface BankServiceFeign extends HealthFeign {
+public interface BankServiceFeign extends PingFeign {
 
     @PostMapping("/banking/banks/{db}/addBank")
     String addBank(@PathVariable("db") String db, @RequestBody BankProto.Bank newBank);

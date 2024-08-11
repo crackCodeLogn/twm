@@ -1,8 +1,8 @@
-package com.vv.personal.twm.twm.feign;
+package com.vv.personal.twm.feign;
 
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
-import com.vv.personal.twm.ping.feign.HealthFeign;
+import com.vv.personal.twm.ping.remote.feign.PingFeign;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * @since 17/11/20
  */
 @FeignClient("twm-rendering-service")
-public interface RenderServiceFeign extends HealthFeign {
+public interface RenderServiceFeign extends PingFeign {
 
     @PostMapping("/render/rendBanks")
     String rendBanks(@RequestBody BankProto.BankList bankList);

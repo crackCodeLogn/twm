@@ -1,5 +1,6 @@
-package com.vv.personal.twm.twm;
+package com.vv.personal.twm;
 
+import com.vv.personal.twm.constants.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,15 +20,13 @@ import java.net.UnknownHostException;
 import java.time.ZoneId;
 import java.util.TimeZone;
 
-import static com.vv.personal.twm.twm.constants.Constants.*;
-
 /**
  * @author Vivek
  * @since 16/11/20
  */
 @EnableFeignClients
 @EnableDiscoveryClient
-@ComponentScan({"com.vv.personal.twm.twm", "com.vv.personal.twm.ping"})
+@ComponentScan({"com.vv.personal.twm", "com.vv.personal.twm.ping"})
 @SpringBootApplication
 public class TwmServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(TwmServer.class);
@@ -47,14 +46,14 @@ public class TwmServer {
 
     @EventListener(ApplicationReadyEvent.class)
     public void firedUpAllCylinders() {
-        String host = LOCALHOST;
+        String host = Constants.LOCALHOST;
         try {
             host = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
             LOGGER.error("Failed to obtain ip address. ", e);
         }
-        String port = environment.getProperty(LOCAL_SPRING_PORT);
+        String port = environment.getProperty(Constants.LOCAL_SPRING_PORT);
         LOGGER.info("'{}' activation is complete! Exact url: {}", environment.getProperty("spring.application.name").toUpperCase(),
-                String.format(SWAGGER_UI_URL, host, port));
+                String.format(Constants.SWAGGER_UI_URL, host, port));
     }
 }

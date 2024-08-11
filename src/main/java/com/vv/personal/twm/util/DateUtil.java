@@ -1,9 +1,9 @@
-package com.vv.personal.twm.twm.util;
+package com.vv.personal.twm.util;
+
+import com.vv.personal.twm.constants.Constants;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-
-import static com.vv.personal.twm.twm.constants.Constants.EMPTY_STR;
 
 /**
  * @author Vivek
@@ -12,7 +12,7 @@ import static com.vv.personal.twm.twm.constants.Constants.EMPTY_STR;
 public class DateUtil {
 
     public static LocalDate transmuteToLocalDate(String inputDate) {
-        String pattern = EMPTY_STR;
+        String pattern = Constants.EMPTY_STR;
         if (inputDate.matches("[0-9]{4}[0-9]{2}[0-9]{2}")) pattern = "yyyyMMdd";
         else if (inputDate.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) pattern = "yyyy-MM-dd";
         else if (inputDate.matches("[0-9]{2}-[0-9]{2}-[0-9]{4}")) pattern = "dd-MM-yyyy";

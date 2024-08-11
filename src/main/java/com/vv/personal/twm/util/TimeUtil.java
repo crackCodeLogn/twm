@@ -1,9 +1,9 @@
-package com.vv.personal.twm.twm.util;
+package com.vv.personal.twm.util;
+
+import com.vv.personal.twm.constants.Constants;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-
-import static com.vv.personal.twm.twm.constants.Constants.EMPTY_STR;
 
 /**
  * @author Vivek
@@ -12,7 +12,7 @@ import static com.vv.personal.twm.twm.constants.Constants.EMPTY_STR;
 public class TimeUtil {
 
     public static LocalTime transmuteToLocalTime(String inputTime) {
-        String pattern = EMPTY_STR;
+        String pattern = Constants.EMPTY_STR;
         if (inputTime.matches("[0-9]{2}[0-9]{2}[0-9]{2}")) pattern = "HHmmss";
         else if (inputTime.matches("[0-9]{2}:[0-9]{2}:[0-9]{2}")) pattern = "HH:mm:ss";
         else if (inputTime.matches("[0-9]{2}[0-9]{2}")) pattern = "HHmm";

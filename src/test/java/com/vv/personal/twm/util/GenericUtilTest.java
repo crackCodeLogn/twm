@@ -1,10 +1,10 @@
-package com.vv.personal.twm.twm.util;
+package com.vv.personal.twm.util;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import static com.vv.personal.twm.twm.util.GenericUtil.generateInsertionTime;
+import static com.vv.personal.twm.util.GenericUtil.generateInsertionTime;
 import static org.junit.Assert.assertEquals;
 
 /**
