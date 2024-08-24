@@ -113,6 +113,7 @@ public class BankController {
     private String addFixedDeposit(@RequestParam(defaultValue = "V2") String user,
                                    @RequestParam(defaultValue = "V2") String originalUser,
                                    @RequestParam(defaultValue = "12345678901") String fdNumber, //the Key/FD
+                                   FixedDepositProto.AccountType accountType,
                                    @RequestParam(defaultValue = "12345678901") String customerId,
                                    @RequestParam(defaultValue = "ABCD0123456") String bankIfsc,
                                    @RequestParam(defaultValue = "0.0") double depositAmount,
@@ -139,6 +140,7 @@ public class BankController {
                 .setUser(user)
                 .setOriginalUser(originalUser)
                 .setFdNumber(fdNumber)
+                .setAccountType(accountType)
                 .setCustomerId(customerId)
                 .setBankIFSC(bankIfsc)
                 .setDepositAmount(depositAmount)
