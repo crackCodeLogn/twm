@@ -53,4 +53,13 @@ public interface BankServiceFeign extends PingFeign {
                                                                              @PathVariable("value") String value,
                                                                              @PathVariable("excludeOnBankIfsc") String excludeOnBankIfsc,
                                                                              @PathVariable("considerActiveFdOnly") boolean considerActiveFdOnly);
+
+    @GetMapping("/banking/fd/{db}/freeze/totalAmount?fdKey={fdKey}&totalAmount={totalAmount}")
+    String freezeTotalAmount(@PathVariable("db") String db,
+                             @PathVariable("fdKey") String fdKey,
+                             @PathVariable("totalAmount") Double totalAmount);
+
+    @GetMapping("/banking/fd/{db}/expire/nr?fdKey={fdKey}")
+    String expireNrFd(@PathVariable("db") String db,
+                      @PathVariable("fdKey") String fdKey);
 }

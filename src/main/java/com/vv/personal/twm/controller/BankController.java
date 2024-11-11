@@ -201,6 +201,20 @@ public class BankController {
         return bankServiceFeign.updateFdActiveStatus(db, fdNumber, isActive);
     }
 
+    @GetMapping("/manual/fd/freeze-total-amount")
+    @Operation(summary = "freeze total amount")
+    public String freezeTotalAmount(String db, String fdNumber, Double totalAmount) {
+        LOGGER.info("Initiating update of FD {} to freeze total amount to {}", fdNumber, totalAmount);
+        return bankServiceFeign.freezeTotalAmount(db, fdNumber, totalAmount);
+    }
+
+    @GetMapping("/manual/fd/expire/nr")
+    @Operation(summary = "mark NR account as expired")
+    public String expireNrFd(String db, String fdNumber) {
+        LOGGER.info("Initiating update of FD {} to expired", fdNumber);
+        return bankServiceFeign.expireNrFd(db, fdNumber);
+    }
+
     @GetMapping("/fd/getFixedDeposits")
     @Operation(summary = "get FD(s) on fields", hidden = true)
     public FixedDepositProto.FixedDepositList getFixedDeposits(FixedDepositProto.FilterBy fdField,
