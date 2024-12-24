@@ -40,7 +40,7 @@ public class BankController {
     @GetMapping("/banks/addBank")
     @Operation(summary = "add new bank entry")
     private String addBank(String bank, String bankIfsc, String contactNumber, BankProto.BankType bankType,
-                           Boolean isBankActive, String db) {
+                           Boolean isBankActive, String countryCode, String db) {
         LOGGER.info("Adding new bank: {} x {}", bank, bankIfsc);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
@@ -52,6 +52,7 @@ public class BankController {
                 .setContactNumber(contactNumber)
                 .setBankType(bankType)
                 .setIsActive(isBankActive)
+                .setCountryCode(countryCode)
                 .build();
         LOGGER.info("Took input a new bank => '{}'", newBank);
         try {
