@@ -5,4 +5,8 @@ package com.vv.personal.twm.constants;
  * @since 2024-12-24
  */
 public enum Databases {
+    crdb,
+
+    @Deprecated
+    mongo
 }
