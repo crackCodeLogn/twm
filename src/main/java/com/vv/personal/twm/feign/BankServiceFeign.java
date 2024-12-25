@@ -4,10 +4,7 @@ import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.ping.remote.feign.PingFeign;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @author Vivek
@@ -62,4 +59,32 @@ public interface BankServiceFeign extends PingFeign {
     @GetMapping("/banking/fd/{db}/expire/nr?fdKey={fdKey}")
     String expireNrFd(@PathVariable("db") String db,
                       @PathVariable("fdKey") String fdKey);
+
+    @PostMapping("/banking/bank-account/{db}/bank-account")
+    String addBankAccount(@PathVariable("db") String db, @RequestBody BankProto.BankAccount newBankAccount);
+
+    @PostMapping("/banking/bank-account/{db}/bank-accounts")
+    String addBankAccounts(@PathVariable("db") String db, @RequestBody BankProto.BankAccounts newBankAccounts);
+
+    @GetMapping("/banking/bank-account/{db}/bank-accounts")
+    BankProto.BankAccounts getBankAccounts(@PathVariable("db") String db,
+                                           @RequestParam("field") String field,
+                                           @RequestParam("value") String value);
+
+    @GetMapping("/banking/bank-account/{db}/bank-account/{id}")
+    BankProto.BankAccount getBankAccount(@PathVariable("db") String db,
+                                         @PathVariable("id") String id);
+
+    @GetMapping("/banking/bank-account/{db}/bank-account/{id}/balance")
+    BankProto.BankAccount getBankAccountBalance(@PathVariable("db") String db,
+                                                @PathVariable("id") String id);
+
+    // Should be PATCH, but apparently its non-standard for feign, thus falling back to POST
+    @PostMapping("/banking/bank-account/{db}/bank-account/{id}/balance")
+    boolean updateBankAccountBalance(@PathVariable("db") String db,
+                                     @PathVariable("id") String id,
+                                     @RequestBody BankProto.BankAccount bankAccount);
+
+    @DeleteMapping("/banking/bank-account/{db}/bank-account/{id}")
+    String deleteBankAccount(@PathVariable("db") String db, @PathVariable("id") String id);
 }

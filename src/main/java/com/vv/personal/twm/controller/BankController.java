@@ -4,6 +4,7 @@ import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.constants.BankFields;
 import com.vv.personal.twm.constants.Constants;
+import com.vv.personal.twm.constants.DatabaseType;
 import com.vv.personal.twm.feign.BankServiceFeign;
 import com.vv.personal.twm.feign.RenderServiceFeign;
 import com.vv.personal.twm.ping.processor.Pinger;
@@ -14,10 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author Vivek
@@ -63,7 +61,7 @@ public class BankController {
         return "FAILED!!";
     }
 
-    @PostMapping("/banks/deleteBank")
+    @DeleteMapping("/banks/deleteBank")
     @Operation(summary = "delete bank on IFSC code")
     public String deleteBank(String ifscToDelete, String db) {
         LOGGER.info("Deleting bank IFSC: {}", ifscToDelete);
@@ -168,7 +166,7 @@ public class BankController {
         return Constants.FAILED;
     }
 
-    @PostMapping("/fd/deleteFixedDeposit")
+    @DeleteMapping("/fd/deleteFixedDeposit")
     @Operation(summary = "delete FD on supplied key")
     public String deleteFixedDeposit(String fdKey, String db) {
         LOGGER.info("Deleting FD: {}", fdKey);
@@ -310,15 +308,198 @@ public class BankController {
         return renderServiceFeign.rendFdsWithAnnualBreakdown(fdQueryResponse);
     }
 
-    public BankProto.BankList getAllBanks(String db) {
+    @PostMapping("/bank-account/bank-account")
+    @Operation(summary = "add new bank account entry")
+    public String addBankAccount(String bankIfsc, String accountName,
+                                 String accountNumber,
+                                 String transitNumber,
+                                 String institutionNumber,
+                                 Double balance,
+                                 BankProto.BankAccountType bankAccountType,
+                                 Double overdraftBalance,
+                                 Double interestRate,
+                                 Boolean isBankActive,
+                                 BankProto.CurrencyCode currencyCode,
+                                 @RequestParam(defaultValue = "") String note,
+                                 DatabaseType db) {
+        bankIfsc = bankIfsc.strip();
+        accountName = accountName.strip();
+        accountNumber = accountNumber.strip();
+        transitNumber = transitNumber.strip();
+        institutionNumber = institutionNumber.strip();
+        note = note.strip();
+
+        LOGGER.info("Adding new bank account: {} x {}", accountName, bankIfsc);
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
+        BankProto.BankAccount newBankAccount = BankProto.BankAccount.newBuilder()
+                .setId(UUID.randomUUID().toString())
+                .setBank(BankProto.Bank.newBuilder()
+                        .setIFSC(bankIfsc))
+                .setNumber(accountNumber)
+                .setName(accountName)
+                .setTransitNumber(transitNumber)
+                .setInstitutionNumber(institutionNumber)
+                .setBalance(balance)
+                .setBankAccountType(bankAccountType)
+                .setOverdraftBalance(overdraftBalance)
+                .setInterestRate(interestRate)
+                .setIsActive(isBankActive)
+                .setCcy(currencyCode)
+                .setNote(note)
+                .build();
+        LOGGER.info("Took input a new bank account => '{}'", newBankAccount);
+        try {
+            bankServiceFeign.addBankAccount(db.name(), newBankAccount);
+            return newBankAccount.getId();
+        } catch (Exception e) {
+            LOGGER.error("Failed to call bank service's addBankAccount end-point. ", e);
+        }
+        return "FAILED!!";
+    }
+
+    @GetMapping("/bank-accounts/bank-accounts")
+    @Operation(summary = "get bank account(s) on fields")
+    public String getBankAccounts(BankFields bankField,
+                                  @RequestParam(defaultValue = "") String searchValue,
+                                  DatabaseType db) {
+        if (bankField == BankFields.TYPE) {
+            return "Not supported yet";
+        }
+
+        LOGGER.info("Retrieving bank accounts on {} x {}", bankField, searchValue);
+        if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
+        BankProto.BankAccounts bankAccounts;
+        try {
+            bankAccounts = bankServiceFeign.getBankAccounts(db.name(), bankField.name(), searchValue);
+            LOGGER.info("Bank accounts query resp: {}", bankAccounts);
+        } catch (Exception e) {
+            LOGGER.error("Failed to call bank account service's getBankAccounts end-point. ", e);
+            return Constants.FAILED;
+        }
+
+        try {
+            String rendOutput = renderServiceFeign.rendBankAccounts(bankAccounts);
+            LOGGER.info("HTML table output:-\n{}", rendOutput);
+            return rendOutput;
+        } catch (Exception e) {
+            LOGGER.error("Failed to call / process rendering service's rendBankAccounts end-point. ", e);
+        }
+        return Constants.FAILED;
+    }
+
+    @GetMapping("/bank-accounts/bank-account")
+    @Operation(summary = "get bank account")
+    public String getBankAccount(String id, DatabaseType db) {
+        id = id.strip();
+        LOGGER.info("Retrieving bank account id: {}", id);
+        if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
+        BankProto.BankAccount bankAccount;
+        try {
+            bankAccount = bankServiceFeign.getBankAccount(db.name(), id);
+            if (bankAccount == null) {
+                return "May not exist: " + id;
+            }
+            LOGGER.info("Bank account query resp: {}", bankAccount);
+        } catch (Exception e) {
+            LOGGER.error("Failed to call bank account service's getBankAccount end-point. ", e);
+            return Constants.FAILED;
+        }
+
+        try {
+            String rendOutput =
+                    renderServiceFeign.rendBankAccounts(BankProto.BankAccounts.newBuilder().addAccounts(bankAccount).build());
+            LOGGER.info("HTML table output:-\n{}", rendOutput);
+            return rendOutput;
+        } catch (Exception e) {
+            LOGGER.error("Failed to call / process rendering service's rendBankAccounts end-point. ", e);
+        }
+        return Constants.FAILED;
+    }
+
+    @GetMapping("/bank-accounts/bank-account/balance")
+    @Operation(summary = "get bank account balance")
+    public String getBankAccountBalance(String id, DatabaseType db) {
+        id = id.strip();
+        LOGGER.info("Retrieving bank account balance of id: {}", id);
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
+        BankProto.BankAccount bankAccount;
+        try {
+            bankAccount = bankServiceFeign.getBankAccountBalance(db.name(), id);
+            LOGGER.info("Bank account bal query resp: {}", bankAccount);
+        } catch (Exception e) {
+            LOGGER.error("Failed to call bank account service's getBankAccount end-point. ", e);
+            return Constants.FAILED;
+        }
+
+        if (bankAccount.getId().equals(id)) {
+            return String.valueOf(bankAccount.getBalance());
+        }
+        return Constants.FAILED;
+    }
+
+    @PostMapping("/bank-accounts/bank-account/balance")
+    @Operation(summary = "update bank account balance")
+    public String updateBankAccountBalance(String id, Double newBalance, DatabaseType db) {
+        id = id.strip();
+        LOGGER.info("Updating bank account balance of id: {}", id);
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
+
+        try {
+            boolean result = bankServiceFeign.updateBankAccountBalance(db.name(), id,
+                    BankProto.BankAccount.newBuilder()
+                            .setBalance(newBalance)
+                            .setId(id)
+                            .build());
+            LOGGER.info("Bank account update bal resp: {}", result);
+            if (result) return "Done";
+        } catch (Exception e) {
+            LOGGER.error("Failed to call bank account service's getBankAccount end-point. ", e);
+        }
+        return Constants.FAILED;
+    }
+
+    @DeleteMapping("/bank-account/bank-account/")
+    @Operation(summary = "delete bank account on id")
+    public String deleteBankAccount(String id, DatabaseType db) {
+        id = id.strip();
+        LOGGER.info("Deleting bank account: {}", id);
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return "END-POINTS NOT READY!";
+        }
+        try {
+            return bankServiceFeign.deleteBankAccount(db.name(), id);
+        } catch (Exception e) {
+            LOGGER.error("Failed to call bank account service's deleteBank end-point. ", e);
+        }
+        return "FAILED!!";
+    }
+
+    private BankProto.BankList getAllBanks(String db) {
         return bankServiceFeign.getBanks(db, BankFields.ALL.name(), Constants.EMPTY_STR);
     }
 
-    public FixedDepositProto.FixedDepositList getAllFixedDeposits(String db, boolean considerActiveFdOnly) {
+    private FixedDepositProto.FixedDepositList getAllFixedDeposits(String db, boolean considerActiveFdOnly) {
         return bankServiceFeign.getFds(db, FixedDepositProto.FilterBy.ALL.name(), Constants.EMPTY_STR, considerActiveFdOnly);
     }
 
-    public InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount, double rateOfInterest, String startDate, int months, int days) {
+    private InspectResult inspectInput(String fdNumber, String customerId, String bankIfsc, double depositAmount,
+                                       double rateOfInterest, String startDate, int months, int days) {
         final InspectResult result = new InspectResult().setPass(false);
         if (!fdNumber.matches("[0-9-]+"))
             return result.setPassResult("FD-number in incorrect format. Correct => [0-9-]+, your fd number is: " + fdNumber);

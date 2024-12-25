@@ -22,4 +22,7 @@ public interface RenderServiceFeign extends PingFeign {
 
     @PostMapping("/render/rendFdsWithAnnualBreakdown")
     String rendFdsWithAnnualBreakdown(@RequestBody FixedDepositProto.FixedDepositList fixedDepositList);
+
+    @PostMapping("/render/rendBankAccounts")
+    String rendBankAccounts(BankProto.BankAccounts bankAccounts);
 }
