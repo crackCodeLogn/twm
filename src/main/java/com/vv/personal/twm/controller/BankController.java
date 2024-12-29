@@ -315,7 +315,7 @@ public class BankController {
                                  String transitNumber,
                                  String institutionNumber,
                                  Double balance,
-                                 BankProto.BankAccountType bankAccountType,
+                                 String pipeSeparatedBankAccountTypes,
                                  Double overdraftBalance,
                                  Double interestRate,
                                  Boolean isBankActive,
@@ -328,6 +328,9 @@ public class BankController {
         transitNumber = transitNumber.strip();
         institutionNumber = institutionNumber.strip();
         note = note.strip();
+        pipeSeparatedBankAccountTypes = pipeSeparatedBankAccountTypes.strip();
+        List<BankProto.BankAccountType> bankAccountTypeList =
+                Arrays.stream(pipeSeparatedBankAccountTypes.split("\\|")).map(type -> BankProto.BankAccountType.valueOf(type.strip())).toList();
 
         LOGGER.info("Adding new bank account: {} x {}", accountName, bankIfsc);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
@@ -343,7 +346,7 @@ public class BankController {
                 .setTransitNumber(transitNumber)
                 .setInstitutionNumber(institutionNumber)
                 .setBalance(balance)
-                .setBankAccountType(bankAccountType)
+                .addAllBankAccountTypes(bankAccountTypeList)
                 .setOverdraftBalance(overdraftBalance)
                 .setInterestRate(interestRate)
                 .setIsActive(isBankActive)
