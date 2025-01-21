@@ -223,7 +223,7 @@ public class BankController {
     @GetMapping("/fd/getFixedDeposits")
     @Operation(summary = "get FD(s) on fields", hidden = true)
     public FixedDepositProto.FixedDepositList getFixedDeposits(FixedDepositProto.FilterBy fdField,
-                                                               String searchValue,
+                                                               @RequestParam(defaultValue = "") String searchValue,
                                                                boolean considerActiveFdOnly,
                                                                DatabaseType dbType) {
         String db = dbType.name();
@@ -518,8 +518,9 @@ public class BankController {
             return result.setPassResult("FD-number in incorrect format. Correct => [0-9-]+, your fd number is: " + fdNumber);
         if (!customerId.matches("[0-9]+"))
             return result.setPassResult("CustomerId in incorrect format. Correct => [0-9]+");
-        if (!bankIfsc.matches("[A-Z]{4}[0-9]{7}") && !bankIfsc.matches("PO-[0-9]{6}") && !bankIfsc.matches("[0-9]{5}"))
-            return result.setPassResult("IFSC in incorrect format. Correct => [A-Z]{4}[0-9]{7} || PO-[0-9]{6} || [0-9]{5}");
+        // stopping ifsc checks - 20250120
+//        if (!bankIfsc.matches("[A-Z]{4}[0-9]{7}") && !bankIfsc.matches("PO-[0-9]{6}") && !bankIfsc.matches("[0-9]{5}"))
+//            return result.setPassResult("IFSC in incorrect format. Correct => [A-Z]{4}[0-9]{7} || PO-[0-9]{6} || [0-9]{5}");
         if (depositAmount <= 0.0) return result.setPassResult("Deposit amt has to be positive");
         if (rateOfInterest <= 0.0) return result.setPassResult("Rate of interest has to be positive");
         if (DateUtil.transmuteToLocalDate(startDate) == null)
