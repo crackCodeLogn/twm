@@ -1,6 +1,7 @@
 package com.vv.personal.twm.controller;
 
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
+import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.constants.BankFields;
 import com.vv.personal.twm.constants.Constants;
@@ -13,9 +14,24 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static com.vv.personal.twm.constants.Constants.FAILED;
 
 /**
  * @author Vivek
@@ -79,35 +95,72 @@ public class BankController {
         return "FAILED!!";
     }
 
-    @GetMapping("/banks/getBanks")
+    @GetMapping("/manual/banks/getBanks")
     @Operation(summary = "get bank(s) on fields")
     public String getBanks(BankFields bankField,
-                           String searchValue, DatabaseType dbType) {
-        String db = dbType.name();
-        LOGGER.info("Retrieving banks on {} x {}", bankField, searchValue);
-        if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
+                           @RequestParam(required = false, defaultValue = "") String searchValue,
+                           DatabaseType dbType) {
+        Optional<BankProto.BankList> banksQueryResponse = getBanksOnConstraints(bankField, searchValue, dbType);
+        if (banksQueryResponse.isEmpty()) return FAILED;
+
+        if (!pinger.allEndPointsActive(renderServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
-            return "END-POINTS NOT READY!";
-        }
-        BankProto.BankList banksQueryResponse;
-        try {
-            banksQueryResponse = bankField != BankFields.ALL
-                    ? bankServiceFeign.getBanks(db, bankField.name(), searchValue)
-                    : getAllBanks(db);
-            LOGGER.info("Banks query resp: {}", banksQueryResponse);
-        } catch (Exception e) {
-            LOGGER.error("Failed to call bank service's getBanks end-point. ", e);
-            return Constants.FAILED;
+            return FAILED;
         }
 
         try {
-            String rendOutput = renderServiceFeign.rendBanks(banksQueryResponse);
+            String rendOutput = renderServiceFeign.rendBanks(banksQueryResponse.get());
             LOGGER.info("HTML table output:-\n{}", rendOutput);
             return rendOutput;
         } catch (Exception e) {
             LOGGER.error("Failed to call / process rendering service's rendBanks end-point. ", e);
         }
-        return Constants.FAILED;
+        return FAILED;
+    }
+
+    @GetMapping("/banks/getBanks")
+    @Operation(summary = "get bank(s) on fields")
+    public BankProto.BankList getBanks(
+            @RequestParam("bankField") String bankFieldStr,
+            @RequestParam("search") String searchValue,
+            @RequestParam("dbType") String dbTypeStr) {
+        BankProto.BankList bankList = BankProto.BankList.newBuilder().build();
+        BankFields bankField;
+        try {
+            bankField = BankFields.valueOf(bankFieldStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.error("Invalid bank field: {}", bankFieldStr);
+            return bankList;
+        }
+        DatabaseType dbType;
+        try {
+            dbType = DatabaseType.valueOf(dbTypeStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.error("Invalid database type: {}", dbTypeStr);
+            return bankList;
+        }
+        return getBanksOnConstraints(bankField, searchValue, dbType).orElse(bankList);
+    }
+
+    private Optional<BankProto.BankList> getBanksOnConstraints(BankFields bankField, String searchValue,
+                                                               DatabaseType dbType) {
+        String db = dbType.name();
+        LOGGER.info("Retrieving banks on {} x {}", bankField, searchValue);
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return Optional.empty();
+        }
+
+        try {
+            BankProto.BankList banksQueryResponse = bankField != BankFields.ALL
+                    ? bankServiceFeign.getBanks(db, bankField.name(), searchValue)
+                    : getAllBanks(db);
+            LOGGER.info("Banks query resp: {}", banksQueryResponse);
+            return Optional.of(banksQueryResponse);
+        } catch (Exception e) {
+            LOGGER.error("Failed to call bank service's getBanks end-point. ", e);
+        }
+        return Optional.empty();
     }
 
     @GetMapping("/fd/addFd")
@@ -167,7 +220,7 @@ public class BankController {
         } catch (Exception e) {
             LOGGER.error("Failed to call bank service's addFd end-point. ", e);
         }
-        return Constants.FAILED;
+        return FAILED;
     }
 
     @DeleteMapping("/fd/deleteFixedDeposit")
@@ -298,7 +351,7 @@ public class BankController {
         } catch (Exception e) {
             LOGGER.error("Failed to call / process rendering service's rendBanks end-point. ", e);
         }
-        return Constants.FAILED;
+        return FAILED;
     }
 
     @GetMapping("/fd/getFixedDepositsAnnualBreakdown")
@@ -373,7 +426,7 @@ public class BankController {
         return "FAILED!!";
     }
 
-    @GetMapping("/bank-accounts/bank-accounts")
+    @GetMapping("/manual/bank-accounts/bank-accounts")
     @Operation(summary = "get bank account(s) on fields")
     public String getBankAccounts(BankFields bankField,
                                   @RequestParam(defaultValue = "") String searchValue,
@@ -382,28 +435,80 @@ public class BankController {
             return "Not supported yet";
         }
 
-        LOGGER.info("Retrieving bank accounts on {} x {}", bankField, searchValue);
-        if (!pinger.allEndPointsActive(bankServiceFeign, renderServiceFeign)) {
-            LOGGER.error("All end-points not active. Will not trigger op! Check log");
-            return "END-POINTS NOT READY!";
-        }
-        BankProto.BankAccounts bankAccounts;
-        try {
-            bankAccounts = bankServiceFeign.getBankAccounts(db.name(), bankField.name(), searchValue);
-            LOGGER.info("Bank accounts query resp: {}", bankAccounts);
-        } catch (Exception e) {
-            LOGGER.error("Failed to call bank account service's getBankAccounts end-point. ", e);
-            return Constants.FAILED;
-        }
+        Optional<BankProto.BankAccounts> bankAccounts = sharedGetBankAccounts(bankField, searchValue, db);
+        if (bankAccounts.isEmpty()) return FAILED;
 
+        if (!pinger.allEndPointsActive(renderServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return FAILED;
+        }
         try {
-            String rendOutput = renderServiceFeign.rendBankAccounts(bankAccounts);
+            String rendOutput = renderServiceFeign.rendBankAccounts(bankAccounts.orElse(null));
             LOGGER.info("HTML table output:-\n{}", rendOutput);
             return rendOutput;
         } catch (Exception e) {
             LOGGER.error("Failed to call / process rendering service's rendBankAccounts end-point. ", e);
         }
-        return Constants.FAILED;
+        return FAILED;
+    }
+
+    @GetMapping("/bank-accounts/bank-accounts")
+    @Operation(summary = "get bank account(s) on fields")
+    public BankProto.BankAccounts getBankAccounts(@RequestParam("bankField") String bankFieldStr,
+                                                  @RequestParam("search") String searchValue,
+                                                  @RequestParam("dbType") String dbTypeStr) {
+        BankProto.BankAccounts bankAccounts = BankProto.BankAccounts.newBuilder().build();
+        BankFields bankField;
+        try {
+            bankField = BankFields.valueOf(bankFieldStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.error("Invalid bank accounts field: {}", bankFieldStr);
+            return bankAccounts;
+        }
+        if (bankField == BankFields.TYPE) {
+            LOGGER.warn("Bank account type {} - not supported yet", bankField);
+            return bankAccounts;
+        }
+        DatabaseType dbType;
+        try {
+            dbType = DatabaseType.valueOf(dbTypeStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.error("Invalid database type: {}", dbTypeStr);
+            return bankAccounts;
+        }
+        Optional<BankProto.BankAccounts> accounts =
+                sharedGetBankAccounts(bankField, searchValue, dbType);
+        return accounts.map(value -> BankProto.BankAccounts.newBuilder()
+                .addAllAccounts(
+                        value.getAccountsList().stream()
+                                .map(bankAccount ->
+                                        BankProto.BankAccount.newBuilder()
+                                                .mergeFrom(bankAccount)
+                                                .clearId()
+                                                .build())
+                                .collect(Collectors.toList())
+                )
+                .build()).orElse(bankAccounts);
+    }
+
+    private Optional<BankProto.BankAccounts> sharedGetBankAccounts(BankFields bankField, String searchValue,
+                                                                   DatabaseType db) {
+
+        LOGGER.info("Retrieving bank accounts on {} x {}", bankField, searchValue);
+        if (!pinger.allEndPointsActive(bankServiceFeign)) {
+            LOGGER.error("All end-points not active. Will not trigger op! Check log");
+            return Optional.empty();
+        }
+
+        try {
+            BankProto.BankAccounts bankAccounts = bankServiceFeign.getBankAccounts(db.name(), bankField.name(),
+                    searchValue);
+            LOGGER.info("Bank accounts query resp: {}", bankAccounts);
+            return Optional.of(bankAccounts);
+        } catch (Exception e) {
+            LOGGER.error("Failed to call bank account service's getBankAccounts end-point. ", e);
+        }
+        return Optional.empty();
     }
 
     @GetMapping("/bank-accounts/bank-account")
@@ -424,7 +529,7 @@ public class BankController {
             LOGGER.info("Bank account query resp: {}", bankAccount);
         } catch (Exception e) {
             LOGGER.error("Failed to call bank account service's getBankAccount end-point. ", e);
-            return Constants.FAILED;
+            return FAILED;
         }
 
         try {
@@ -435,7 +540,7 @@ public class BankController {
         } catch (Exception e) {
             LOGGER.error("Failed to call / process rendering service's rendBankAccounts end-point. ", e);
         }
-        return Constants.FAILED;
+        return FAILED;
     }
 
     @GetMapping("/bank-accounts/bank-account/balance")
@@ -453,19 +558,52 @@ public class BankController {
             LOGGER.info("Bank account bal query resp: {}", bankAccount);
         } catch (Exception e) {
             LOGGER.error("Failed to call bank account service's getBankAccount end-point. ", e);
-            return Constants.FAILED;
+            return FAILED;
         }
 
         if (bankAccount.getId().equals(id)) {
             return String.valueOf(bankAccount.getBalance());
         }
-        return Constants.FAILED;
+        return FAILED;
+    }
+
+    @PostMapping("/manual/bank-accounts/bank-account/balance")
+    @Operation(summary = "update bank account balance")
+    public String updateBankAccountBalance(
+            @RequestParam String id,
+            @RequestParam Double amount,
+            @RequestParam DatabaseType dbType) {
+        return sharedUpdateBankAccountBalance(id.strip(), amount, dbType);
     }
 
     @PostMapping("/bank-accounts/bank-account/balance")
     @Operation(summary = "update bank account balance")
-    public String updateBankAccountBalance(String id, Double newBalance, DatabaseType db) {
-        id = id.strip();
+    public String updateBankAccountBalance(
+            @RequestBody DataPacketProto.DataPacket dataPacket) {
+        Map<String, String> stringStringMap = dataPacket.getStringStringMapMap();
+        Map<String, Double> stringDoubleMap = dataPacket.getStringDoubleMapMap();
+
+        if (!stringStringMap.containsKey("id") || !stringStringMap.containsKey("db") || !stringDoubleMap.containsKey(
+                "amount")) {
+            LOGGER.error("Failed to process request because of missing id / db / amount => {}", dataPacket);
+            return FAILED;
+        }
+
+        String db = stringStringMap.get("db").strip();
+        DatabaseType type;
+        try {
+            type = DatabaseType.valueOf(db);
+        } catch (Exception e) {
+            LOGGER.error("Unrecognized db type: {}", db, e);
+            return FAILED;
+        }
+
+        String id = stringStringMap.get("id").strip();
+        Double newBalance = stringDoubleMap.get("amount");
+        return sharedUpdateBankAccountBalance(id, newBalance, type);
+    }
+
+    private String sharedUpdateBankAccountBalance(String id, Double amount, DatabaseType dbType) {
         LOGGER.info("Updating bank account balance of id: {}", id);
         if (!pinger.allEndPointsActive(bankServiceFeign)) {
             LOGGER.error("All end-points not active. Will not trigger op! Check log");
@@ -473,9 +611,9 @@ public class BankController {
         }
 
         try {
-            boolean result = bankServiceFeign.updateBankAccountBalance(db.name(), id,
+            boolean result = bankServiceFeign.updateBankAccountBalance(dbType.name(), id,
                     BankProto.BankAccount.newBuilder()
-                            .setBalance(newBalance)
+                            .setBalance(amount)
                             .setId(id)
                             .build());
             LOGGER.info("Bank account update bal resp: {}", result);
@@ -483,7 +621,7 @@ public class BankController {
         } catch (Exception e) {
             LOGGER.error("Failed to call bank account service's getBankAccount end-point. ", e);
         }
-        return Constants.FAILED;
+        return FAILED;
     }
 
     @DeleteMapping("/bank-account/bank-account/")

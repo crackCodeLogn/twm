@@ -5,5 +5,5 @@ package com.vv.personal.twm.constants;
  * @since 17/11/20
  */
 public enum BankFields {
-    ALL, NAME, TYPE, IFSC
+    ALL, NAME, TYPE, IFSC, CCY
 }
