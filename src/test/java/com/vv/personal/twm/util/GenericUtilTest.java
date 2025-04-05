@@ -16,7 +16,7 @@ public class GenericUtilTest {
 
     @Test
     public void testGenerateInsertionTime() {
-        assertEquals(1606569240000L, generateInsertionTime("20201128-18:44"));
+        assertEquals(1606607040000L, generateInsertionTime("20201128-18:44"));
     }
 
 }
